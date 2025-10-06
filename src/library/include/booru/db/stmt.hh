@@ -1,7 +1,7 @@
 #pragma once
 
-#include "booru/db/types.hh"
-#include "booru/result.hh"
+#include <booru/db/types.hh>
+#include <booru/result.hh>
 
 namespace Booru::DB
 {
@@ -9,6 +9,8 @@ namespace Booru::DB
 /// @brief Interface for a prepared statement.
 class DatabasePreparedStatementInterface
 {
+    static inline const String LOGGER = "booru.db.stmt";
+
   public:
     virtual ~DatabasePreparedStatementInterface() {}
 
@@ -16,23 +18,23 @@ class DatabasePreparedStatementInterface
     // Bind values to statement arguments.
     // ////////////////////////////////////////////////////////////////////////////////////////////
 
-    virtual ResultCode BindValue( char const* _Name, void const* _Blob, size_t _Size ) = 0;
-    virtual ResultCode BindValue( char const* _Name, FLOAT _Value )                    = 0;
-    virtual ResultCode BindValue( char const* _Name, INTEGER _Value )                  = 0;
-    virtual ResultCode BindValue( char const* _Name, TEXT const& _Value )              = 0;
-    virtual ResultCode BindNull( char const* _Name )                                   = 0;
+    virtual ResultCode BindValue( StringView const & _Name, void const* _Blob, size_t _Size ) = 0;
+    virtual ResultCode BindValue( StringView const & _Name, FLOAT _Value )                    = 0;
+    virtual ResultCode BindValue( StringView const & _Name, INTEGER _Value )                  = 0;
+    virtual ResultCode BindValue( StringView const & _Name, TEXT const& _Value )              = 0;
+    virtual ResultCode BindNull(  StringView const & _Name )                                   = 0;
 
     template <size_t BlobSize>
-    ResultCode BindValue( char const* _Name, BLOB<BlobSize> const& _Value );
+    ResultCode BindValue( StringView const & _Name, BLOB<BlobSize> const& _Value );
 
     template <class TValue>
-    ResultCode BindValue( char const* _Name, NULLABLE<TValue> const& _Value );
+    ResultCode BindValue( StringView const & _Name, NULLABLE<TValue> const& _Value );
 
     // ////////////////////////////////////////////////////////////////////////////////////////////
     // Retrieve returned values from an executed statement.
     // ////////////////////////////////////////////////////////////////////////////////////////////
 
-    virtual Expected<int> GetColumnIndex( char const* _Name ) = 0;
+    virtual Expected<int> GetColumnIndex( StringView const & _Name ) = 0;
 
     virtual ResultCode GetColumnValue( int _Index, void const*& _Blob, size_t& _Size ) = 0;
     virtual ResultCode GetColumnValue( int _Index, FLOAT& _Value )                     = 0;
@@ -47,7 +49,7 @@ class DatabasePreparedStatementInterface
     ResultCode GetColumnValue( int _Index, NULLABLE<TValue>& _Value );
 
     template <class TValue>
-    ResultCode GetColumnValue( char const* _Name, TValue& _Value );
+    ResultCode GetColumnValue( StringView const & _Name, TValue& _Value );
 
     // ////////////////////////////////////////////////////////////////////////////////////////////
     // Execution
@@ -86,13 +88,13 @@ class DatabasePreparedStatementInterface
 // Bind values.
 
 template <size_t BlobSize>
-ResultCode DatabasePreparedStatementInterface::BindValue( char const* _Name, BLOB<BlobSize> const& _Value )
+ResultCode DatabasePreparedStatementInterface::BindValue( StringView const & _Name, BLOB<BlobSize> const& _Value )
 {
     return BindValue( _Name, _Value.data(), _Value.size() );
 }
 
 template <class TValue>
-ResultCode DatabasePreparedStatementInterface::BindValue( char const* _Name,
+ResultCode DatabasePreparedStatementInterface::BindValue( StringView const & _Name,
                                                           NULLABLE<TValue> const& _Value )
 {
     if ( _Value.has_value() )
@@ -113,17 +115,17 @@ ResultCode DatabasePreparedStatementInterface::GetColumnValue( int _Index, BLOB<
     // get blob pointer and size
     void const* blobPtr = nullptr;
     size_t blobSize     = 0;
-    CHECK_RESULT_RETURN_ERROR( GetColumnValue( _Index, blobPtr, blobSize ) );
+    CHECK_RETURN_RESULT_ON_ERROR( GetColumnValue( _Index, blobPtr, blobSize ) );
 
     _Value.fill( 0 );
     if ( blobSize > BlobSize )
     {
-        // TODO: warning? error? data got truncated
+        LOG_WARNING("Data of size {} got truncated trying to store in blob of size {}", blobSize, BlobSize);
         blobSize = BlobSize;
     }
     else
     {
-        // TODO: warning? data too short, padded with 0s
+        LOG_WARNING("Data of size {} got padded with zeroes trying to store in blob of size {}", blobSize, BlobSize);
     }
     ::memcpy( _Value.data(), blobPtr, blobSize );
     return ResultCode::OK;
@@ -145,10 +147,10 @@ ResultCode DatabasePreparedStatementInterface::GetColumnValue( int _Index, NULLA
 }
 
 template <class TValue>
-ResultCode DatabasePreparedStatementInterface::GetColumnValue( char const* _Name, TValue& _Value )
+ResultCode DatabasePreparedStatementInterface::GetColumnValue( StringView const & _Name, TValue& _Value )
 {
     auto indexResult = GetColumnIndex( _Name );
-    CHECK_RESULT_RETURN_ERROR( indexResult.Code );
+    CHECK_RETURN_RESULT_ON_ERROR( indexResult.Code );
 
     int index = indexResult.Value;
     return GetColumnValue( index, _Value );
@@ -159,20 +161,20 @@ ResultCode DatabasePreparedStatementInterface::GetColumnValue( char const* _Name
 template <class TValue>
 Expected<TValue> DatabasePreparedStatementInterface::ExecuteScalar( bool _NeedRow )
 {
-    CHECK_RESULT_RETURN_ERROR( Step( _NeedRow ) );
+    CHECK_RETURN_RESULT_ON_ERROR( Step( _NeedRow ) );
 
     TValue value;
-    CHECK_RESULT_RETURN_ERROR( GetColumnValue( 0, value ) );
+    CHECK_RETURN_RESULT_ON_ERROR( GetColumnValue( 0, value ) );
     return value;
 }
 
 template <class TEntity>
 Expected<TEntity> DatabasePreparedStatementInterface::ExecuteRow( bool _NeedRow )
 {
-    CHECK_RESULT_RETURN_ERROR( Step( _NeedRow ) );
+    CHECK_RETURN_RESULT_ON_ERROR( Step( _NeedRow ) );
 
     TEntity value;
-    CHECK_RESULT_RETURN_ERROR( LoadEntity( value, *this ) );
+    CHECK_RETURN_RESULT_ON_ERROR( LoadEntity( value, *this ) );
     return value;
 }
 
@@ -182,16 +184,17 @@ ExpectedList<TEntity> DatabasePreparedStatementInterface::ExecuteList()
     std::vector<TEntity> values;
 
     auto stepResult = Step();
-    CHECK_RESULT_RETURN_ERROR( stepResult );
+    CHECK_RETURN_RESULT_ON_ERROR( stepResult );
     while ( stepResult != ResultCode::DatabaseEnd )
     {
         TEntity value;
-        CHECK_RESULT_RETURN_ERROR( LoadEntity( value, *this ) );
+        CHECK_RETURN_RESULT_ON_ERROR( LoadEntity( value, *this ) );
         values.push_back( value );
         stepResult = Step();
-        CHECK_RESULT_RETURN_ERROR( stepResult );
+        CHECK_RETURN_RESULT_ON_ERROR( stepResult );
     }
     return values;
 }
 
 }
+

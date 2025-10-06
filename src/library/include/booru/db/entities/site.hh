@@ -8,6 +8,7 @@ namespace Booru::DB::Entities
 struct Site : public Entity
 {
     static char const constexpr* Table = "Sites";
+    static char const constexpr* LOGGER = "booru.db.entites.sites";
 
     TEXT Name;
     TEXT Description;

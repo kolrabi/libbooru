@@ -1,14 +1,15 @@
-#include "booru/string.hh"
+#include <booru/string.hh>
+#include <booru/result.hh>
 
-#include "booru/result.hh"
+namespace Booru::Strings
+{
 
-#include <cstring>
-#include <array>
+static constexpr String LOGGER = "booru.strings";
 
-std::vector<String> SplitString( char const* _Str, char _Delim )
+StringVector Split( StringView const & _Str, char _Delim )
 {
     std::vector<String> tokens;
-    std::stringstream ss( _Str );
+    std::stringstream ss( String{_Str} );
     String token;
     while ( std::getline( ss, token, _Delim ) )
     {
@@ -17,9 +18,9 @@ std::vector<String> SplitString( char const* _Str, char _Delim )
     return tokens;
 }
 
-String JoinString( StringList const& _Items, char const* _Sep )
+String Join( StringVector const& _Items, StringView const & _Sep )
 {
-    String::size_type reserveLength = ::strlen( _Sep ) * _Items.size();
+    String::size_type reserveLength = _Sep.size() * _Items.size();
     for ( auto const& item : _Items )
     {
         reserveLength += item.size();
@@ -35,7 +36,7 @@ String JoinString( StringList const& _Items, char const* _Sep )
             str += _Sep;
         }
         first = false;
-        str += ToString( item );
+        str += From( item );
     }
     return str;
 }
@@ -53,11 +54,11 @@ static inline char IntToHexChar( uint8_t _I )
     return hex[_I % 16];
 }
 
-String DataToHex( uint8_t const* _Data, size_t _Size )
+String BytesToHex( ByteSpan const & _Data )
 {
     String str;
-    str.reserve( _Size * 2 );
-    for ( size_t i = 0; i < _Size; i++ )
+    str.reserve( _Data.size() * 2 );
+    for ( size_t i = 0; i < _Data.size(); i++ )
     {
         str += IntToHexChar( _Data[i] >> 4 );
         str += IntToHexChar( _Data[i] & 0xf );
@@ -65,9 +66,9 @@ String DataToHex( uint8_t const* _Data, size_t _Size )
     return str;
 }
 
-ResultCode HexToData( char const* _Hex, std::vector<uint8_t>& _Data )
+ResultCode HexToBytes( StringView const & _Hex, ByteVector & _Data )
 {
-    size_t l       = strlen( _Hex );
+    size_t l       = _Hex.size();
     bool lowNibble = l % 2;
 
     _Data.clear();
@@ -95,12 +96,15 @@ ResultCode HexToData( char const* _Hex, std::vector<uint8_t>& _Data )
     return ResultCode::OK;
 }
 
-String MD5ToHex( MD5Sum const& _MD5 ) { return DataToHex( _MD5.data(), _MD5.size() ); }
+String From( MD5Sum const& _MD5 )
+{ 
+    return BytesToHex( ByteSpan( _MD5.data(), _MD5.size() ) );
+}
 
-ResultCode HexToMD5( char const* _Hex, MD5Sum& _MD5 )
+ResultCode HexToMD5( StringView const & _Hex, MD5Sum& _MD5 )
 {
-    std::vector<uint8_t> data;
-    CHECK_RESULT_RETURN_ERROR( HexToData( _Hex, data ) );
+    ByteVector data;
+    CHECK_RETURN_RESULT_ON_ERROR( HexToBytes( _Hex, data ) );
 
     if ( data.size() < _MD5.size() )
         return ResultCode::ArgumentTooShort;
@@ -109,4 +113,6 @@ ResultCode HexToMD5( char const* _Hex, MD5Sum& _MD5 )
 
     ::memcpy( _MD5.data(), data.data(), data.size() * sizeof( data[0] ) );
     return ResultCode::OK;
+}
+
 }

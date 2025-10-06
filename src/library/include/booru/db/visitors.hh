@@ -15,7 +15,7 @@ class LoadFromStatementPropertyVisitor
     DB::DatabasePreparedStatementInterface& Stmt;
 
     template <class TValue>
-    ResultCode Property( char const* _Name, TValue& _Value, bool _IsPrimaryKey = false )
+    ResultCode Property( StringView const & _Name, TValue& _Value, bool _IsPrimaryKey = false )
     {
         return Stmt.GetColumnValue( _Name, _Value );
     }
@@ -30,7 +30,7 @@ class StoreToStatementPropertyVisitor
     DB::DatabasePreparedStatementInterface& Stmt;
 
     template <class TValue>
-    ResultCode Property( char const* _Name, TValue& _Value, bool _IsPrimaryKey = false )
+    ResultCode Property( StringView const & _Name, TValue& _Value, bool _IsPrimaryKey = false )
     {
         return Stmt.BindValue( _Name, _Value );
     }
@@ -45,9 +45,9 @@ class ToStringPropertyVisitor
     String m_String;
     String m_Indent;
 
-    String NameString( String const & _Name ) const
+    String NameString( StringView const & _Name ) const
     {
-        String Name = _Name;
+        String Name(_Name);
         Name += ":";
         if (Name.size() < 12)
         {
@@ -57,7 +57,7 @@ class ToStringPropertyVisitor
     }
 
     template <class TValue>
-    ResultCode Property( char const* _Name, TValue& _Value, bool _IsPrimaryKey = false )
+    ResultCode Property( StringView const & _Name, TValue& _Value, bool _IsPrimaryKey = false )
     {
         String Name = NameString(_Name);
         m_String += m_Indent;

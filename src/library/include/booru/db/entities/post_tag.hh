@@ -7,6 +7,7 @@ namespace Booru::DB::Entities
 struct PostTag : public Entity
 {
     static char const constexpr* Table = "PostTags";
+    static char const constexpr* LOGGER = "booru.db.entites.posttags";
 
     INTEGER PostId = -1;
     INTEGER TagId  = -1;

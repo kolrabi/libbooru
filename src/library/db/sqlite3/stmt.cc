@@ -5,13 +5,15 @@
 
 #include <sqlite3.h>
 
+#define LOGGER    "booru.db.sqlite3.stmt"
+
 namespace Booru::DB::Sqlite3
 {
 
 DatabasePreparedStatementSqlite3::DatabasePreparedStatementSqlite3( sqlite3_stmt* _Handle )
     : m_Handle{ _Handle }
 {
-    CHECK_CONDITION_RETURN( _Handle != nullptr );
+    CHECK_ASSERT( _Handle != nullptr );
 }
 
 DatabasePreparedStatementSqlite3::~DatabasePreparedStatementSqlite3()
@@ -23,23 +25,19 @@ DatabasePreparedStatementSqlite3::~DatabasePreparedStatementSqlite3()
     }
 }
 
-ResultCode DatabasePreparedStatementSqlite3::GetParamIndex( char const* _Name, INTEGER& _Index )
+ResultCode DatabasePreparedStatementSqlite3::GetParamIndex( StringView const & _Name, INTEGER& _Index )
 {
-    CHECK_CONDITION_RETURN_ERROR( m_Handle != nullptr );
-    CHECK_CONDITION_RETURN_ERROR( _Name != nullptr );
+    CHECK_ASSERT( m_Handle != nullptr );
+    CHECK_ASSERT( !_Name.empty() );
 
-    if ( _Name[0] != '$' )
-    {
-        std::string NameString( "$" );
-        NameString += _Name;
-        return GetParamIndex( NameString.c_str(), _Index );
-    }
+    String NameString( "$" );
+    NameString += _Name;
 
-    _Index = sqlite3_bind_parameter_index( m_Handle, _Name );
+    _Index = sqlite3_bind_parameter_index( m_Handle, NameString.c_str() );
     return ResultCode::OK;
 }
 
-ResultCode DatabasePreparedStatementSqlite3::BindValue( char const* _Name, void const* _Blob,
+ResultCode DatabasePreparedStatementSqlite3::BindValue( StringView const & _Name, void const* _Blob,
                                                         size_t _Size )
 {
     if ( !_Blob )
@@ -48,7 +46,7 @@ ResultCode DatabasePreparedStatementSqlite3::BindValue( char const* _Name, void 
     }
 
     INTEGER paramIndex;
-    CHECK_RESULT_RETURN_ERROR( GetParamIndex( _Name, paramIndex ) );
+    CHECK_RETURN_RESULT_ON_ERROR( GetParamIndex( _Name, paramIndex ) );
     if ( paramIndex == 0 )
     {
         return ResultCode::OK; // OK, not all queries use all entity members
@@ -63,10 +61,10 @@ ResultCode DatabasePreparedStatementSqlite3::BindValue( char const* _Name, void 
     return Sqlite3ToResult( sqlite3_bind_blob( m_Handle, paramIndex, blobCopy, _Size, ::free ) );
 }
 
-ResultCode DatabasePreparedStatementSqlite3::BindValue( char const* _Name, FLOAT _Value )
+ResultCode DatabasePreparedStatementSqlite3::BindValue( StringView const & _Name, FLOAT _Value )
 {
     INTEGER paramIndex;
-    CHECK_RESULT_RETURN_ERROR( GetParamIndex( _Name, paramIndex ) );
+    CHECK_RETURN_RESULT_ON_ERROR( GetParamIndex( _Name, paramIndex ) );
     if ( paramIndex == 0 )
     {
         return ResultCode::OK; // OK, not all queries use all entity members
@@ -74,10 +72,10 @@ ResultCode DatabasePreparedStatementSqlite3::BindValue( char const* _Name, FLOAT
     return Sqlite3ToResult( sqlite3_bind_double( m_Handle, paramIndex, _Value ) );
 }
 
-ResultCode DatabasePreparedStatementSqlite3::BindValue( char const* _Name, INTEGER _Value )
+ResultCode DatabasePreparedStatementSqlite3::BindValue( StringView const & _Name, INTEGER _Value )
 {
     INTEGER paramIndex;
-    CHECK_RESULT_RETURN_ERROR( GetParamIndex( _Name, paramIndex ) );
+    CHECK_RETURN_RESULT_ON_ERROR( GetParamIndex( _Name, paramIndex ) );
     if ( paramIndex == 0 )
     {
         return ResultCode::OK; // OK, not all queries use all entity members
@@ -85,10 +83,10 @@ ResultCode DatabasePreparedStatementSqlite3::BindValue( char const* _Name, INTEG
     return Sqlite3ToResult( sqlite3_bind_int64( m_Handle, paramIndex, _Value ) );
 }
 
-ResultCode DatabasePreparedStatementSqlite3::BindValue( char const* _Name, TEXT const& _Value )
+ResultCode DatabasePreparedStatementSqlite3::BindValue( StringView const & _Name, TEXT const& _Value )
 {
     INTEGER paramIndex;
-    CHECK_RESULT_RETURN_ERROR( GetParamIndex( _Name, paramIndex ) );
+    CHECK_RETURN_RESULT_ON_ERROR( GetParamIndex( _Name, paramIndex ) );
     if ( paramIndex == 0 )
     {
         return ResultCode::OK; // OK, not all queries use all entity members
@@ -96,18 +94,16 @@ ResultCode DatabasePreparedStatementSqlite3::BindValue( char const* _Name, TEXT 
 
     // create a copy
     char* stringCopy = ::strdup( _Value.c_str() );
-    CHECK_CONDITION_RETURN_ERROR( stringCopy != nullptr );
-
-    //fprintf( stderr, "%p: Bind value '%s' to '%s' (%ld)\n", this, stringCopy, _Name, paramIndex );
+    CHECK_ASSERT( stringCopy != nullptr );
 
     // give it to sqlite, let it free() it when it's done
     return Sqlite3ToResult( sqlite3_bind_text( m_Handle, paramIndex, stringCopy, -1, ::free ) );
 }
 
-ResultCode DatabasePreparedStatementSqlite3::BindNull( char const* _Name )
+ResultCode DatabasePreparedStatementSqlite3::BindNull( StringView const & _Name )
 {
     INTEGER paramIndex;
-    CHECK_RESULT_RETURN_ERROR( GetParamIndex( _Name, paramIndex ) );
+    CHECK_RETURN_RESULT_ON_ERROR( GetParamIndex( _Name, paramIndex ) );
     if ( paramIndex == 0 )
     {
         return ResultCode::OK; // OK, not all queries use all entity members
@@ -158,26 +154,27 @@ ResultCode DatabasePreparedStatementSqlite3::GetColumnValue( int _Index, TEXT& _
     }
 
     char const* str = reinterpret_cast<char const*>( sqlite3_column_text( m_Handle, _Index ) );
-    CHECK_CONDITION_RETURN_ERROR( str != nullptr );
+    CHECK_ASSERT( str != nullptr );
     _Value = str;
     return ResultCode::OK;
 }
 
 bool DatabasePreparedStatementSqlite3::ColumnIsNull( int _Index )
 {
+    CHECK_ASSERT( m_Handle != nullptr );
+    CHECK_ASSERT( _Index >= 0 );
+
     return sqlite3_column_type( m_Handle, _Index ) == SQLITE_NULL;
 }
 
-Expected<int> DatabasePreparedStatementSqlite3::GetColumnIndex( char const* _Name )
+Expected<int> DatabasePreparedStatementSqlite3::GetColumnIndex( StringView const & _Name )
 {
     int columnCount = sqlite3_column_count( m_Handle );
     for ( int i = 0; i < columnCount; i++ )
     {
-        char const* name = sqlite3_column_name( m_Handle, i );
-        if ( ::strcasecmp( name, _Name ) == 0 )
-        {
+        StringView name = sqlite3_column_name( m_Handle, i );
+        if ( name == _Name )
             return i;
-        }
     }
     return ResultCode::NotFound;
 }
@@ -196,10 +193,10 @@ ResultCode DatabasePreparedStatementSqlite3::Step( bool _NeedRow )
 // ----------------------------------------------------------------
 // DatabaseSqlite3
 
-ExpectedOwning<DatabaseInterface> DatabaseSqlite3::OpenDatabase( char const* _Path )
+ExpectedOwning<DatabaseInterface> DatabaseSqlite3::OpenDatabase( StringView const & _Path )
 {
     sqlite3* db_handle = nullptr;
-    int sqlite_result  = sqlite3_open( _Path, &db_handle );
+    int sqlite_result  = sqlite3_open( String( _Path ).c_str(), &db_handle );
     if ( sqlite_result == SQLITE_OK )
     {
         return { std::make_unique<DatabaseSqlite3>( db_handle ) };

@@ -8,6 +8,7 @@ namespace Booru::DB::Entities
 struct Post : public Entity
 {
     static char const constexpr* Table = "Posts";
+    static char const constexpr* LOGGER = "booru.db.entites.posts";
 
     enum
     {

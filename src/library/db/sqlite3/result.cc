@@ -1,5 +1,8 @@
-#include "booru/result.hh"
+#include <booru/result.hh>
 #include <sqlite3.h>
+
+namespace Booru
+{
 
 ResultCode Sqlite3ToResult( int _RC )
 {
@@ -23,4 +26,6 @@ ResultCode Sqlite3ToResult( int _RC )
         return ResultCode::DatabaseTableLocked;
     }
     return ResultCode::DatabaseError;
+}
+
 }

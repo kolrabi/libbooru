@@ -11,14 +11,14 @@ namespace Booru::DB::Sqlite3
 class DatabaseSqlite3 : public DB::DatabaseInterface
 {
   public:
-    static ExpectedOwning<DatabaseInterface> OpenDatabase( char const* _Path );
+    static ExpectedOwning<DatabaseInterface> OpenDatabase( StringView const & _Path );
 
     DatabaseSqlite3( sqlite3* _Handle );
     virtual ~DatabaseSqlite3();
 
     virtual ExpectedOwning<DatabasePreparedStatementInterface>
-    PrepareStatement( char const* _SQL ) override;
-    virtual ResultCode ExecuteSQL( char const* _SQL ) override;
+    PrepareStatement( StringView const & _SQL ) override;
+    virtual ResultCode ExecuteSQL( StringView const & _SQL ) override;
 
     virtual ResultCode BeginTransaction() override;
     virtual ResultCode CommitTransaction() override;

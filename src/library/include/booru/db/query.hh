@@ -4,6 +4,7 @@
 
 namespace Booru::DB::Visitors
 {
+
 // Visitor that add all properties of an entity (except the primary key) to a query as a column. For
 // update queries.
 template <class Q>
@@ -13,7 +14,7 @@ class DBQueryNonPrimaryKeyColumnVisitor final
     DBQueryNonPrimaryKeyColumnVisitor( Q& _Query ) : Query{ _Query } {}
 
     template <class TValue>
-    ResultCode Property( char const* _Name, TValue& _Value, bool _IsPrimaryKey = false )
+    ResultCode Property( StringView const & _Name, TValue& _Value, bool _IsPrimaryKey = false )
     {
         if ( !_IsPrimaryKey )
         {
@@ -35,20 +36,20 @@ class QueryWhereCondition
 {
   public:
     virtual ~QueryWhereCondition() {}
-    virtual std::string ToString() = 0;
+    virtual String ToString() = 0;
 };
 
 // Equality where condition
 class QueryWhereEqualCondition : public QueryWhereCondition
 {
   public:
-    QueryWhereEqualCondition( char const* _A, char const* _B ) : A{ _A }, B{ _B } {}
+    QueryWhereEqualCondition( StringView const & _A, StringView const & _B ) : A{ _A }, B{ _B } {}
 
-    std::string ToString() override { return A + " == " + B; }
+    String ToString() override { return A + " == " + B; }
 
   protected:
-    std::string A;
-    std::string B;
+    String A;
+    String B;
 };
 
 // Abstract query base. Where conditions are ANDed together.
@@ -56,53 +57,56 @@ template <class Derived>
 class Query
 {
   public:
-    Query( char const* _Table ) : Table{ _Table } {}
+    static inline const String LOGGER = "booru.db.query";
+
+    Query( StringView const & _Table ) : Table{ _Table } {}
 
     virtual std::string ToString() = 0;
 
     // Tries to prepare the query into a statement.
     ExpectedOwning<DatabasePreparedStatementInterface> Prepare( DatabaseInterface& _DB )
     {
-        std::string sqlString = ToString();
+        String sqlString = ToString();
         return _DB.PrepareStatement( sqlString.c_str() );
     }
 
     // Add a column to the query.
-    Derived& Column( std::string const& _Name )
+    Derived& Column( StringView const & _Name )
     {
-        Columns.push_back( _Name );
+        Columns.push_back( String( _Name ) );
         return static_cast<Derived&>( *this );
     }
 
     // Add a where condition.
-    Derived& WhereEqual( char const* _A, char const* _B )
+    Derived& WhereEqual( StringView const & _A, StringView const & _B )
     {
-        WhereArgs.emplace_back( std::make_unique<QueryWhereEqualCondition>( _A, _B ) );
+        WhereArgs.emplace_back( MakeOwning<QueryWhereEqualCondition>( _A, _B ) );
         return static_cast<Derived&>( *this );
     }
 
     // Add a key where condition (WHERE key = $key). Bind "$key" in the prepared statement.
-    Derived& Key( char const* _Key )
+    Derived& Key( StringView const & _Key )
     {
-        std::string keyString = "$";
+        String keyString = "$";
         keyString += _Key;
-        return WhereEqual( _Key, keyString.c_str() );
+        return WhereEqual( _Key, keyString );
     }
 
   protected:
-    std::string Table;
-    std::vector<std::string> Columns;
-    std::vector<Owning<QueryWhereCondition>> WhereArgs;
+    String Table;
+    StringVector Columns;
+    Vector<Owning<QueryWhereCondition>> WhereArgs;
 
-    std::string GetWhereString()
+    String GetWhereString()
     {
         if ( WhereArgs.empty() )
         {
             return "";
         }
 
-        std::string whereString = "WHERE ";
+        String whereString = "WHERE ";
         bool first              = true;
+        // TODO: whereString += Strings::Join( WhereArgs, " AND ");
         for ( auto const& clause : WhereArgs )
         {
             if ( !first )
@@ -119,7 +123,7 @@ class Query
 class Select : public Query<Select>
 {
   public:
-    Select( char const* _Table ) : Query{ _Table } {}
+    Select( StringView const & _Table ) : Query{ _Table } {}
 
     std::string ToString() override
     {
@@ -154,7 +158,7 @@ class Select : public Query<Select>
 class Insert : public Query<Insert>
 {
   public:
-    Insert( char const* _Table ) : Query{ _Table } {}
+    Insert( StringView const & _Table ) : Query{ _Table } {}
 
     std::string ToString() override
     {
@@ -190,7 +194,7 @@ class Insert : public Query<Insert>
 class Update : public Query<Update>
 {
   public:
-    Update( char const* _Table ) : Query{ _Table } {}
+    Update( StringView const & _Table ) : Query{ _Table } {}
 
     std::string ToString() override
     {
@@ -214,18 +218,18 @@ class Update : public Query<Update>
 class Delete : public Query<Delete>
 {
   public:
-    Delete( char const* _Table ) : Query{ _Table } {}
+    Delete( StringView const & _Table ) : Query{ _Table } {}
 
-    std::string ToString() override
+    String ToString() override
     {
         if ( WhereArgs.empty() )
         {
+            LOG_ERROR("Refusing to create a DELETE statement without a where clause!");
             // not doing a delete without a where
-            // TODO: error!
             return "--";
         }
 
-        std::string sqlString = "DELETE FROM " + Table + " " + GetWhereString();
+        String sqlString = "DELETE FROM " + Table + " " + GetWhereString();
         return sqlString;
     }
 };
@@ -234,7 +238,7 @@ template <class TValue>
 class InsertEntity : public Insert
 {
   public:
-    InsertEntity( char const* _Table, TValue& _Entity ) : Insert( _Table )
+    InsertEntity( StringView const & _Table, TValue& _Entity ) : Insert( _Table )
     {
         auto Visitor = Visitors::DBQueryNonPrimaryKeyColumnVisitor( *this );
         auto result  = _Entity.IterateProperties( Visitor );
@@ -245,7 +249,7 @@ template <class TValue>
 class UpdateEntity : public Update
 {
   public:
-    UpdateEntity( char const* _Table, TValue& _Entity ) : Update( _Table )
+    UpdateEntity( StringView const & _Table, TValue& _Entity ) : Update( _Table )
     {
         auto Visitor = Visitors::DBQueryNonPrimaryKeyColumnVisitor( *this );
         auto result  = _Entity.IterateProperties( Visitor );

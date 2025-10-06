@@ -8,6 +8,7 @@ namespace Booru::DB::Entities
 struct PostFile : public Entity
 {
     static char const constexpr* Table = "PostFiles";
+    static char const constexpr* LOGGER = "booru.db.entites.postfiles";
 
     TEXT Path;
     INTEGER PostId = -1;

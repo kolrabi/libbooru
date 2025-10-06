@@ -13,11 +13,11 @@ class DatabasePreparedStatementSqlite3 : public DatabasePreparedStatementInterfa
     DatabasePreparedStatementSqlite3( sqlite3_stmt* _Handle );
     virtual ~DatabasePreparedStatementSqlite3();
 
-    ResultCode BindValue( char const* _Name, void const* _Blob, size_t _Size ) override;
-    ResultCode BindValue( char const* _Name, FLOAT _Value ) override;
-    ResultCode BindValue( char const* _Name, INTEGER _Value ) override;
-    ResultCode BindValue( char const* _Name, TEXT const& _Value ) override;
-    ResultCode BindNull( char const* _Name ) override;
+    ResultCode BindValue( StringView const & _Name, void const* _Blob, size_t _Size ) override;
+    ResultCode BindValue( StringView const & _Name, FLOAT _Value ) override;
+    ResultCode BindValue( StringView const & _Name, INTEGER _Value ) override;
+    ResultCode BindValue( StringView const & _Name, TEXT const& _Value ) override;
+    ResultCode BindNull(  StringView const & _Name ) override;
 
     ResultCode GetColumnValue( int _Index, void const*& _Blob, size_t& _Size ) override;
     ResultCode GetColumnValue( int _Index, FLOAT& _Value ) override;
@@ -25,13 +25,13 @@ class DatabasePreparedStatementSqlite3 : public DatabasePreparedStatementInterfa
     ResultCode GetColumnValue( int _Index, TEXT& _Value ) override;
     bool ColumnIsNull( int _Index ) override;
 
-    Expected<int> GetColumnIndex( char const* _Name ) override;
+    Expected<int> GetColumnIndex( StringView const & _Name ) override;
     ResultCode Step( bool _NeedRow = false ) override;
 
   private:
     sqlite3_stmt* m_Handle;
 
-    ResultCode GetParamIndex( char const* _Name, INTEGER& _Index );
+    ResultCode GetParamIndex( StringView const & _Name, INTEGER& _Index );
 };
 
 } // namespace Booru::DB::Sqlite3

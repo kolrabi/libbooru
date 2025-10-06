@@ -1,5 +1,10 @@
 #pragma once
 
-#include "booru/common.hh"
+#include <booru/types.hh>
+
+namespace Booru
+{
 
 ResultCode Sqlite3ToResult( int _RC );
+
+}

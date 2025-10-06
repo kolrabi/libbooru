@@ -1,8 +1,12 @@
 #pragma once
 
-#include "booru/common.hh"
+#include <booru/common.hh>
+#include <booru/log.hh>
 
 #include <vector>
+
+namespace Booru
+{
 
 enum class ResultCode : int32_t
 {
@@ -72,112 +76,47 @@ using ExpectedShared = Expected<Shared<TValue>>;
 template <class TValue>
 using ExpectedList = Expected<std::vector<TValue>>;
 
-#define PRINT_RESULT( x, r )                                                                       \
-    fprintf( stderr, "%s:%d: %s: ERROR: %s\n", __FILE__, __LINE__, x, ResultToString( r ) )
+template<class TValue, class...Args>
+static inline bool CheckResult( String const & _LoggerName, TValue const & _Result, StringView const & _ResultStr, StringView const & _Func)
+{
+    auto logger = log4cxx::Logger::getLogger(_LoggerName);
+    if ( ResultIsError(_Result) )
+    {
+        LOG4CXX_ERROR_FMT( logger, "{}(): {} failed: {}", _Func, _ResultStr, ResultToString(_Result) );
+        return true;
+    }
+    LOG4CXX_TRACE_FMT( logger, "{}(): {} OK ({})!", _Func, _ResultStr, ResultToString(_Result) );
+    return false;
+}
 
-#define PRINT_MSG( FMT, ... )                                                                      \
-    fprintf( stderr, "%s:%d: " FMT "\n", __FILE__, __LINE__ __VA_OPT__(, ) __VA_ARGS__ )
+template<class TValue, class...TArgs>
+static inline bool CheckResult( String const & _LoggerName, TValue const & _Result, StringView const & _ResultStr, StringView const & _Func, StringView const & _Msg, TArgs const & ...args)
+{
+    auto logger = log4cxx::Logger::getLogger(_LoggerName);
+    if ( ResultIsError(_Result) )
+    {
+        LOG4CXX_ERROR_FMT( logger, "{}(): {} failed: {}", _Func, _ResultStr, ResultToString(_Result) );
+        LOG4CXX_ERROR_FMT( logger, "{}", std::vformat(_Msg, std::make_format_args(args...)) );
+        return true;
+    }
+    LOG4CXX_TRACE_FMT( logger, "{}(): {} OK ({})!", _Func, _ResultStr, ResultToString(_Result) );
+    LOG4CXX_TRACE_FMT( logger, "{}", std::vformat(_Msg, std::make_format_args(args...)) );
+    return false;
+}
 
-#define CHECK_RESULT_RETURN_ERROR_MSG( x, ... )                                                    \
-    {                                                                                              \
-        auto _result = ( x );                                                                      \
-        if ( ResultIsError( _result ) )                                                            \
-        {                                                                                          \
-            PRINT_RESULT( #x, _result );                                                           \
-            PRINT_MSG( __VA_ARGS__ );                                                              \
-            return _result;                                                                        \
-        }                                                                                          \
-    }
-#define CHECK_RESULT_CONTINUE_ERROR_MSG( x, ... )                                                  \
-    {                                                                                              \
-        auto _result = ( x );                                                                      \
-        if ( ResultIsError( _result ) )                                                            \
-        {                                                                                          \
-            PRINT_RESULT( #x, _result );                                                           \
-            PRINT_MSG( __VA_ARGS__ );                                                              \
-            continue;                                                                              \
-        }                                                                                          \
-    }
-#define CHECK_RESULT_BREAK_ERROR_MSG( x, ... )                                                     \
-    {                                                                                              \
-        auto _result = ( x );                                                                      \
-        if ( ResultIsError( _result ) )                                                            \
-        {                                                                                          \
-            PRINT_RESULT( #x, _result );                                                           \
-            PRINT_MSG( __VA_ARGS__ );                                                              \
-            break;                                                                                 \
-        }                                                                                          \
-    }
+#define CHECK( x, ... )\
+    { auto const & _result = (x); CheckResult(LOGGER, _result, #x, __func__ __VA_OPT__(,) __VA_ARGS__); }
 
-#define CHECK_RESULT_RETURN_ERROR_PRINT( x )                                                       \
-    {                                                                                              \
-        auto _result = ( x );                                                                      \
-        if ( ResultIsError( _result ) )                                                            \
-        {                                                                                          \
-            PRINT_RESULT( #x, _result );                                                           \
-            return _result;                                                                        \
-        }                                                                                          \
-    }
-#define CHECK_RESULT_CONTINUE_ERROR_PRINT( x )                                                     \
-    {                                                                                              \
-        auto _result = ( x );                                                                      \
-        if ( ResultIsError( _result ) )                                                            \
-        {                                                                                          \
-            PRINT_RESULT( #x, _result );                                                           \
-            continue;                                                                              \
-        }                                                                                          \
-    }
-#define CHECK_RESULT_BREAK_ERROR_PRINT( x )                                                        \
-    {                                                                                              \
-        auto _result = ( x );                                                                      \
-        if ( ResultIsError( _result ) )                                                            \
-        {                                                                                          \
-            PRINT_RESULT( #x, _result );                                                           \
-            break;                                                                                 \
-        }                                                                                          \
-    }
+#define CHECK_RETURN_RESULT_ON_ERROR( x, ... )\
+    { auto const & _result = (x); if (CheckResult(LOGGER, _result, #x, __func__ __VA_OPT__(,) __VA_ARGS__)) return (ResultCode)_result; }
 
-#define CHECK_RESULT_RETURN_ERROR( x )                                                             \
-    {                                                                                              \
-        auto _result = ( x );                                                                      \
-        if ( ResultIsError( _result ) )                                                            \
-        {                                                                                          \
-            return _result;                                                                        \
-        }                                                                                          \
-    }
-#define CHECK_RESULT_CONTINUE_ERROR( x )                                                           \
-    {                                                                                              \
-        auto _result = ( x );                                                                      \
-        if ( ResultIsError( _result ) )                                                            \
-        {                                                                                          \
-            continue;                                                                              \
-        }                                                                                          \
-    }
-#define CHECK_RESULT_BREAK_ERROR( x )                                                              \
-    {                                                                                              \
-        auto _result = ( x );                                                                      \
-        if ( ResultIsError( _result ) )                                                            \
-        {                                                                                          \
-            break;                                                                                 \
-        }                                                                                          \
-    }
+#define CHECK_CONTINUE_ON_ERROR( x, ... )\
+    { auto const & _result = (x); if (CheckResult(LOGGER, _result, #x, __func__ __VA_OPT__(,) __VA_ARGS__)) continue; }
 
-#define CHECK_CONDITION_RETURN( x )                                                                \
-    {                                                                                              \
-        bool _result = ( x );                                                                      \
-        if ( !_result )                                                                            \
-        {                                                                                          \
-            PRINT_RESULT( #x, ResultCode::ConditionFailed );                                       \
-            return;                                                                                \
-        }                                                                                          \
-    }
+#define CHECK_BREAK_ON_ERROR( x, ... )\
+    { auto const & _result = (x); if (CheckResult(LOGGER, _result, #x, __func__ __VA_OPT__(,) __VA_ARGS__)) break; }
 
-#define CHECK_CONDITION_RETURN_ERROR( x )                                                          \
-    {                                                                                              \
-        bool _result = ( x );                                                                      \
-        if ( !_result )                                                                            \
-        {                                                                                          \
-            PRINT_RESULT( #x, ResultCode::ConditionFailed );                                       \
-            return ResultCode::ConditionFailed;                                                    \
-        }                                                                                          \
-    }
+#define CHECK_ASSERT( x )\
+    { LOG4CXX_ASSERT_FMT( log4cxx::Logger::getLogger(LOGGER), x, "Assertion failed: {}", #x); }
+
+}

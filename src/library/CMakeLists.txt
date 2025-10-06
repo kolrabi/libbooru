@@ -18,8 +18,10 @@ set( booru_public_headers
     include/booru/db/query.hh
     include/booru/db/stmt.hh
     include/booru/db/types.hh
+    include/booru/log.hh
     include/booru/result.hh
     include/booru/string.hh
+    include/booru/types.hh
 )
 
 set( booru_sources
@@ -55,9 +57,11 @@ set_target_properties(booru PROPERTIES
 
 target_include_directories( booru PRIVATE include )
 target_include_directories( booru PRIVATE ${SQLite3_INCLUDE_DIRS} )
-target_include_directories( booru PUBLIC include/booru )
+target_include_directories( booru PRIVATE ${log4cxx_INCLUDE_DIRS} )
+target_include_directories( booru PUBLIC include/public )
 
 target_link_libraries( booru ${SQLite3_LIBRARIES} )
+target_link_libraries( booru PRIVATE ${log4cxx_LIBRARIES} )
 
 install(TARGETS booru
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} 

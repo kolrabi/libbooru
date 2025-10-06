@@ -8,6 +8,7 @@ namespace Booru::DB::Entities
 struct TagImplication : public Entity
 {
     static char const constexpr* Table = "TagImplications";
+    static char const constexpr* LOGGER = "booru.db.entites.tagimplications";
 
     enum
     {

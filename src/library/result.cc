@@ -1,4 +1,6 @@
-#include "booru/result.hh"
+#include <booru/result.hh>
+
+namespace Booru {
 
 char const* ResultToString( ResultCode _Code )
 {
@@ -107,4 +109,6 @@ char const* ResultToDescription( ResultCode _Code )
     default:
         return "Unknown Result Code";
     }
+}
+
 }
