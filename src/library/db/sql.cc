@@ -163,13 +163,6 @@ char const* g_SQLSchema = R"SQL(
         -- TODO: additional stuff like api information
     );
 
-    INSERT OR IGNORE INTO Sites (Name, Description) VALUES("gelbooru", "");
-    INSERT OR IGNORE INTO Sites (Name, Description) VALUES("danbooru", "");
-    INSERT OR IGNORE INTO Sites (Name, Description) VALUES("sankaku", "");
-    INSERT OR IGNORE INTO Sites (Name, Description) VALUES("pixiv", "");
-    INSERT OR IGNORE INTO Sites (Name, Description) VALUES("deviantart", "");
-
-
     -- associations between posts and other booru ids
     CREATE TABLE IF NOT EXISTS PostSiteIds
     (

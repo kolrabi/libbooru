@@ -13,13 +13,14 @@ class DatabasePreparedStatementSqlite3 : public DatabasePreparedStatementInterfa
     DatabasePreparedStatementSqlite3( sqlite3_stmt* _Handle );
     virtual ~DatabasePreparedStatementSqlite3();
 
-    ResultCode BindValue( StringView const & _Name, void const* _Blob, size_t _Size ) override;
+    ResultCode BindValue( StringView const & _Name,  ByteSpan const& _Blob ) override;
+    // ResultCode BindValue( StringView const & _Name, void const* _Blob, size_t _Size ) override;
     ResultCode BindValue( StringView const & _Name, FLOAT _Value ) override;
     ResultCode BindValue( StringView const & _Name, INTEGER _Value ) override;
     ResultCode BindValue( StringView const & _Name, TEXT const& _Value ) override;
     ResultCode BindNull(  StringView const & _Name ) override;
 
-    ResultCode GetColumnValue( int _Index, void const*& _Blob, size_t& _Size ) override;
+    ResultCode GetColumnValue( int _Index, ByteVector& ) override;
     ResultCode GetColumnValue( int _Index, FLOAT& _Value ) override;
     ResultCode GetColumnValue( int _Index, INTEGER& _Value ) override;
     ResultCode GetColumnValue( int _Index, TEXT& _Value ) override;

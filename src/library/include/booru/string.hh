@@ -7,23 +7,51 @@
 namespace Booru::Strings
 {
 
+/// @brief Splits a string based on a delimiter into a vector of strings.
+/// @param _Str String to split.
+/// @param _Delim Delimiter on which to split. Default is space.
+/// @return A vector of strings. May contain empty strings in case of consecutive delimiters in _Str.
 StringVector Split( StringView const & _Str, char _Delim = ' ' );
+
+/// @brief Join a vector of strings into a single string with a separator. 
+/// @param _Items Strings to concatenate.
+/// @param _Sep Seperatator to use between the strings. Default is comma and space. 
+/// @return A string containing all input strings separated by _Sep. If only one or zero input strings are given, no separator is used.
 String Join( StringVector const& _Items, StringView const & _Sep = ", " );
 
-String BytesToHex( ByteSpan const & _Data );
-ResultCode HexToBytes( StringView const & _Hex, ByteVector & _Data );
+/// @brief Build a hexadecimal string from a number of bytes.
+/// @param _Data Data bytes to convert.
+/// @return A hexadecimal representation of the given strings.
+String From( ByteSpan const & _Data );
 
-String From( MD5Sum const& _MD5 );
-ResultCode HexToMD5( StringView const & _Hex, MD5Sum& _MD5 );
+/// @brief Parse a hexadecimal string into a byte array.
+/// @param _Hex Hexadecimal string to parse.
+/// @return A vector containing the bytes from the string, or an error code.
+Expected<ByteVector> ParseHex( StringView const & _Hex );
 
-template <class TValue>
-static inline String From( const TValue& _Item )
+/// @brief Convert a byte array to a hexadecimal string.
+/// Specialization for fixed arrays. Calls From( ByteSpan ).
+/// @param _Data Data bytes to convert. 
+/// @return A hexadecimal representation of the given data.
+template <size_t N>
+static inline String From( ByteArray<N> const & _Data )
 {
-    std::stringstream ss;
-    ss << _Item;
-    return ss.str();
+    return From( ByteSpan(_Data) );
 }
 
+/// @brief Convert a byte array to a hexadecimal string.
+/// Specialization for dynamic arrays. Calls From( ByteSpan ).
+/// @param _Data Data bytes to convert. 
+/// @return A hexadecimal representation of the given data.
+static inline String From( ByteVector const & _Data )
+{
+    return From( ByteSpan(_Data) );
+}
+
+/// @brief Convert an optional value to a string.
+/// @param _Item Optional value to convert. 
+/// @return A string representation of the given optional value. 
+/// If the optional value is unset, returns "<null>".
 template <class TValue>
 static inline String From( Optional<TValue> & _Item )
 {
@@ -34,14 +62,45 @@ static inline String From( Optional<TValue> & _Item )
     return "<null>";
 }
 
+/// @brief General template for converting types to string. Uses operator<< of the type
+/// @tparam TValue Type of value to convert.
+/// @param _Item Value to convert.
+/// @return A string representing the given value.
 template <class TValue>
-static inline String Join( Vector<TValue> const& _Items, StringView const & _Sep = ", " )
+static inline String From( TValue const & _Item )
+{
+    std::stringstream ss;
+    ss << _Item;
+    return ss.str();
+}
+
+/// @brief Join a vector of value into a string. Converts each item into a string then
+/// joins them together using the separator _Sep.
+/// @param _Items Values to join together.
+/// @param _Sep Separator between items.
+/// @return A string containing all string representations of the given values separated by _Sep.
+/// @see Join(StringVector)
+template <class TValue>
+static inline String Join( Span<TValue> const& _Items, StringView const & _Sep = ", " )
 {
     StringVector strings;
+    strings.reserve(_Items.size());
     for ( auto const& item : _Items )
     {
         strings.push_back( From( item ) );
     }
     return Join( strings, _Sep );
+}
+
+template <class TValue, size_t N>
+static inline String Join( Array<TValue, N> const& _Items, StringView const & _Sep = ", " )
+{
+    return Join( Span(_Items), _Sep );
+}
+
+template <class TValue>
+static inline String Join( Vector<TValue> const& _Items, StringView const & _Sep = ", " )
+{
+    return Join( Span(_Items), _Sep );
 }
 } // namespace Booru

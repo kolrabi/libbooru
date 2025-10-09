@@ -18,11 +18,11 @@ class DatabasePreparedStatementInterface
     // Bind values to statement arguments.
     // ////////////////////////////////////////////////////////////////////////////////////////////
 
-    virtual ResultCode BindValue( StringView const & _Name, void const* _Blob, size_t _Size ) = 0;
-    virtual ResultCode BindValue( StringView const & _Name, FLOAT _Value )                    = 0;
-    virtual ResultCode BindValue( StringView const & _Name, INTEGER _Value )                  = 0;
-    virtual ResultCode BindValue( StringView const & _Name, TEXT const& _Value )              = 0;
-    virtual ResultCode BindNull(  StringView const & _Name )                                   = 0;
+    virtual ResultCode BindValue( StringView const & _Name, ByteSpan const& _Blob )  = 0;
+    virtual ResultCode BindValue( StringView const & _Name, FLOAT _Value )           = 0;
+    virtual ResultCode BindValue( StringView const & _Name, INTEGER _Value )         = 0;
+    virtual ResultCode BindValue( StringView const & _Name, TEXT const& _Value )     = 0;
+    virtual ResultCode BindNull(  StringView const & _Name )                         = 0;
 
     template <size_t BlobSize>
     ResultCode BindValue( StringView const & _Name, BLOB<BlobSize> const& _Value );
@@ -36,7 +36,7 @@ class DatabasePreparedStatementInterface
 
     virtual Expected<int> GetColumnIndex( StringView const & _Name ) = 0;
 
-    virtual ResultCode GetColumnValue( int _Index, void const*& _Blob, size_t& _Size ) = 0;
+    virtual ResultCode GetColumnValue( int _Index, ByteVector& ) = 0;
     virtual ResultCode GetColumnValue( int _Index, FLOAT& _Value )                     = 0;
     virtual ResultCode GetColumnValue( int _Index, INTEGER& _Value )                   = 0;
     virtual ResultCode GetColumnValue( int _Index, TEXT& _Value )                      = 0;
@@ -90,7 +90,7 @@ class DatabasePreparedStatementInterface
 template <size_t BlobSize>
 ResultCode DatabasePreparedStatementInterface::BindValue( StringView const & _Name, BLOB<BlobSize> const& _Value )
 {
-    return BindValue( _Name, _Value.data(), _Value.size() );
+    return BindValue( _Name, ByteSpan(_Value) );
 }
 
 template <class TValue>
@@ -113,21 +113,20 @@ template <size_t BlobSize>
 ResultCode DatabasePreparedStatementInterface::GetColumnValue( int _Index, BLOB<BlobSize>& _Value )
 {
     // get blob pointer and size
-    void const* blobPtr = nullptr;
-    size_t blobSize     = 0;
-    CHECK_RETURN_RESULT_ON_ERROR( GetColumnValue( _Index, blobPtr, blobSize ) );
+    ByteVector blob;
+    CHECK_RETURN_RESULT_ON_ERROR( GetColumnValue( _Index, blob ) );
 
     _Value.fill( 0 );
-    if ( blobSize > BlobSize )
+    if ( blob.size() > BlobSize )
     {
-        LOG_WARNING("Data of size {} got truncated trying to store in blob of size {}", blobSize, BlobSize);
-        blobSize = BlobSize;
+        LOG_WARNING("Data of size {} got truncated trying to store in blob of size {}", blob.size(), BlobSize);
+        blob.resize( BlobSize );
     }
-    else
+    else if ( blob.size() < BlobSize )
     {
-        LOG_WARNING("Data of size {} got padded with zeroes trying to store in blob of size {}", blobSize, BlobSize);
+        LOG_WARNING("Data of size {} got padded with zeroes trying to store in blob of size {}", blob.size(), BlobSize);
     }
-    ::memcpy( _Value.data(), blobPtr, blobSize );
+    std::copy(std::begin(blob), std::end(blob), std::begin(_Value));
     return ResultCode::OK;
 }
 

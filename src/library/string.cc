@@ -8,7 +8,7 @@ static constexpr String LOGGER = "booru.strings";
 
 StringVector Split( StringView const & _Str, char _Delim )
 {
-    std::vector<String> tokens;
+    StringVector tokens;
     std::stringstream ss( String{_Str} );
     String token;
     while ( std::getline( ss, token, _Delim ) )
@@ -20,15 +20,18 @@ StringVector Split( StringView const & _Str, char _Delim )
 
 String Join( StringVector const& _Items, StringView const & _Sep )
 {
+    // preallocate string
     String::size_type reserveLength = _Sep.size() * _Items.size();
     for ( auto const& item : _Items )
     {
         reserveLength += item.size();
     }
 
-    bool first = true;
     String str;
     str.reserve( reserveLength );
+
+    // append items and separators
+    bool first = true;
     for ( auto const& item : _Items )
     {
         if ( !first )
@@ -54,10 +57,13 @@ static inline char IntToHexChar( uint8_t _I )
     return hex[_I % 16];
 }
 
-String BytesToHex( ByteSpan const & _Data )
+String From( ByteSpan const & _Data )
 {
+    // preallocate string, two digits per byte
     String str;
     str.reserve( _Data.size() * 2 );
+
+    // convert each byte into digits and append
     for ( size_t i = 0; i < _Data.size(); i++ )
     {
         str += IntToHexChar( _Data[i] >> 4 );
@@ -66,53 +72,42 @@ String BytesToHex( ByteSpan const & _Data )
     return str;
 }
 
-ResultCode HexToBytes( StringView const & _Hex, ByteVector & _Data )
+Expected<ByteVector> ParseHex( StringView const & _Hex )
 {
-    size_t l       = _Hex.size();
-    bool lowNibble = l % 2;
+    ByteVector result;
 
-    _Data.clear();
-
-    uint8_t value = 0;
-    for ( size_t i = 0; i < l; i++ )
+    // Iterate over the string, each character represents a nybble.
+    size_t strLength = _Hex.size();
+    bool lowNybble = strLength % 2; // start on low nybble if string has odd number of digits
+    
+    uint8_t curByteValue = 0;
+    for ( size_t i = 0; i < strLength; i++ )
     {
+        // get next character, sanity check
         char ch = _Hex[i];
-        if ( !::isxdigit( ch ) )
+        if ( !std::isxdigit( ch ) )
             return ResultCode::InvalidArgument;
 
-        value = ( value << 4 ) | HexCharToInt( ch );
-        if ( lowNibble )
+        // shift nybble value into the lower half of current value
+        curByteValue = ( curByteValue << 4 ) | HexCharToInt( ch );
+        if ( lowNybble )
         {
-            _Data.push_back( value );
-            value = 0;
+            // if we just shifted in the lower nybble, we're done with the byte.
+            result.push_back( curByteValue );
+            curByteValue = 0;
         }
 
-        lowNibble = !lowNibble;
+        // next nybble
+        lowNybble = !lowNybble;
     }
-    if ( lowNibble )
+
+    if ( lowNybble )
     {
-        _Data.push_back( value );
+        // before the inversion of lowNybble we shifted in a high nybble, so we
+        // need to finish the byte
+        result.push_back( curByteValue << 4 );
     }
-    return ResultCode::OK;
+    return result;
 }
 
-String From( MD5Sum const& _MD5 )
-{ 
-    return BytesToHex( ByteSpan( _MD5.data(), _MD5.size() ) );
-}
-
-ResultCode HexToMD5( StringView const & _Hex, MD5Sum& _MD5 )
-{
-    ByteVector data;
-    CHECK_RETURN_RESULT_ON_ERROR( HexToBytes( _Hex, data ) );
-
-    if ( data.size() < _MD5.size() )
-        return ResultCode::ArgumentTooShort;
-    if ( data.size() > _MD5.size() )
-        return ResultCode::ArgumentTooLong;
-
-    ::memcpy( _MD5.data(), data.data(), data.size() * sizeof( data[0] ) );
-    return ResultCode::OK;
-}
-
-}
+} 

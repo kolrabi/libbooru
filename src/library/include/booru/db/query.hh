@@ -1,6 +1,6 @@
 #pragma once
 
-#include "booru/db.hh"
+#include <booru/db.hh>
 
 namespace Booru::DB::Visitors
 {
@@ -28,6 +28,7 @@ class DBQueryNonPrimaryKeyColumnVisitor final
 };
 
 } // namespace Booru::DB::Visitors
+
 namespace Booru::DB
 {
 

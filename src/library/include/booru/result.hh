@@ -43,22 +43,35 @@ enum class ResultCode : int32_t
 {
     return static_cast<int32_t>( _Result ) < 0;
 }
+
+/// @brief Data structure representing an expected value and a possibly unexpected result/error code.
+/// @tparam TValue Type of expected data value.
 template <class TValue>
 struct [[nodiscard]] Expected
 {
-    using ValueType = TValue;
-
     ResultCode Code;
     TValue Value;
 
+    /// @brief C'tor that sets the result code and sets the value to default.
+    /// @param _Code Code to set, by default OK.
     Expected( ResultCode _Code = ResultCode::OK ) : Code{ _Code }, Value{} {}
 
-    Expected( TValue&& _Value ) : Code{ ResultCode::OK }, Value{ std::move( _Value ) } {}
+    /// @brief Successful value constructor. Result code and value will be moved.
+    /// @param _Value Value to set.
+    /// @param _Code Result code to set, defaults to OK.
+    Expected( TValue&& _Value, ResultCode _Code = ResultCode::OK ) : Code{ _Code }, Value{ std::move( _Value ) } {}
 
+    /// @brief Returns true if result code is success, meaning Value is valid.
     operator bool() const { return !ResultIsError( Code ); }
+
+    /// @brief Implicit operator to convert to ResultCode.
     operator ResultCode() const { return Code; }
+
+    /// @brief Implicit operator to retrieve value.
     operator TValue() const { return Value; }
 
+    /// @brief Builds an Expected object from a result code and a value object.
+    /// _Object is only moved if _Code is a success code.
     static inline Expected<TValue> ErrorOrObject( ResultCode _Code, TValue && _Object )
     {
         if (ResultIsError(_Code))
@@ -75,6 +88,8 @@ template <class TValue>
 using ExpectedShared = Expected<Shared<TValue>>;
 template <class TValue>
 using ExpectedList = Expected<std::vector<TValue>>;
+
+// helper functions for result checking and logging 
 
 template<class TValue, class...Args>
 static inline bool CheckResult( String const & _LoggerName, TValue const & _Result, StringView const & _ResultStr, StringView const & _Func)
@@ -104,18 +119,25 @@ static inline bool CheckResult( String const & _LoggerName, TValue const & _Resu
     return false;
 }
 
+// helper macros
+
+// Check x, On error: log error with var args, resume.
 #define CHECK( x, ... )\
     { auto const & _result = (x); CheckResult(LOGGER, _result, #x, __func__ __VA_OPT__(,) __VA_ARGS__); }
 
+// Check x. On error: log error with var args, return error code.
 #define CHECK_RETURN_RESULT_ON_ERROR( x, ... )\
     { auto const & _result = (x); if (CheckResult(LOGGER, _result, #x, __func__ __VA_OPT__(,) __VA_ARGS__)) return (ResultCode)_result; }
 
+// Check x. On error: log error with var args, continue in loop.
 #define CHECK_CONTINUE_ON_ERROR( x, ... )\
     { auto const & _result = (x); if (CheckResult(LOGGER, _result, #x, __func__ __VA_OPT__(,) __VA_ARGS__)) continue; }
 
+// Check x. On error: log error with var args, break from loop.
 #define CHECK_BREAK_ON_ERROR( x, ... )\
     { auto const & _result = (x); if (CheckResult(LOGGER, _result, #x, __func__ __VA_OPT__(,) __VA_ARGS__)) break; }
 
+// Assert that x is true, logs failure.
 #define CHECK_ASSERT( x )\
     { LOG4CXX_ASSERT_FMT( log4cxx::Logger::getLogger(LOGGER), x, "Assertion failed: {}", #x); }
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "booru/db.hh"
-#include "booru/db/stmt.hh"
+#include <booru/db.hh>
+#include <booru/db/stmt.hh>
 
 namespace Booru::DB::Visitors
 {

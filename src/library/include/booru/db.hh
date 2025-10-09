@@ -53,7 +53,7 @@ class TransactionGuard
 
     ~TransactionGuard()
     {
-        if ( !this->IsCommited )
+        if ( !this->IsCommited && IsValid )
         {
             LOG_DEBUG("Transaction Guard {}: ROLLBACK", static_cast<void*>(this));
             auto result = this->DB.RollbackTransaction();

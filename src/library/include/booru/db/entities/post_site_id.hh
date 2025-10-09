@@ -1,6 +1,6 @@
 #pragma once
 
-#include "booru/db/entity.hh"
+#include <booru/db/entity.hh>
 
 namespace Booru::DB::Entities
 {

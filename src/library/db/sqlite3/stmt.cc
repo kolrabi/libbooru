@@ -37,14 +37,8 @@ ResultCode DatabasePreparedStatementSqlite3::GetParamIndex( StringView const & _
     return ResultCode::OK;
 }
 
-ResultCode DatabasePreparedStatementSqlite3::BindValue( StringView const & _Name, void const* _Blob,
-                                                        size_t _Size )
+ResultCode DatabasePreparedStatementSqlite3::BindValue( StringView const & _Name, ByteSpan const &_Blob )
 {
-    if ( !_Blob )
-    {
-        return BindNull( _Name );
-    }
-
     INTEGER paramIndex;
     CHECK_RETURN_RESULT_ON_ERROR( GetParamIndex( _Name, paramIndex ) );
     if ( paramIndex == 0 )
@@ -53,12 +47,12 @@ ResultCode DatabasePreparedStatementSqlite3::BindValue( StringView const & _Name
     }
 
     // make a copy
-    void* blobCopy = ::malloc( _Size );
+    void* blobCopy = ::malloc( _Blob.size_bytes() );
     assert( blobCopy );
-    ::memcpy( blobCopy, _Blob, _Size );
+    ::memcpy( blobCopy, _Blob.data(), _Blob.size_bytes() );
 
     // give it to sqlite, let it call free after use
-    return Sqlite3ToResult( sqlite3_bind_blob( m_Handle, paramIndex, blobCopy, _Size, ::free ) );
+    return Sqlite3ToResult( sqlite3_bind_blob( m_Handle, paramIndex, blobCopy, _Blob.size_bytes(), ::free ) );
 }
 
 ResultCode DatabasePreparedStatementSqlite3::BindValue( StringView const & _Name, FLOAT _Value )
@@ -111,16 +105,15 @@ ResultCode DatabasePreparedStatementSqlite3::BindNull( StringView const & _Name 
     return Sqlite3ToResult( sqlite3_bind_null( m_Handle, paramIndex ) );
 }
 
-ResultCode DatabasePreparedStatementSqlite3::GetColumnValue( int _Index, void const*& _Blob,
-                                                             size_t& _Size )
+ResultCode DatabasePreparedStatementSqlite3::GetColumnValue( int _Index, ByteVector& _Blob )
 {
     if ( ColumnIsNull( _Index ) )
     {
         return ResultCode::ValueIsNull;
     }
 
-    _Blob = sqlite3_column_blob( m_Handle, _Index );
-    _Size = sqlite3_column_bytes( m_Handle, _Index );
+    _Blob.resize(sqlite3_column_bytes( m_Handle, _Index ));
+    ::memcpy(_Blob.data(), sqlite3_column_blob( m_Handle, _Index ), _Blob.size());
     return ResultCode::OK;
 }
 

@@ -8,3 +8,4 @@
 
 #include <format>
 
+#include <booru/result.hh>

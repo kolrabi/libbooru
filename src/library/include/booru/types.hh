@@ -20,7 +20,6 @@ enum class [[nodiscard]] ResultCode : int32_t;
 // type aliases
 using Byte = uint8_t;
 
-
 template <class TValue>
 using Optional = std::optional<TValue>;
 template <class TValue, int N>
