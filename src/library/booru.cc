@@ -32,6 +32,7 @@ Owning<Booru> Booru::InitializeLibrary()
 
 Booru::Booru()
 {
+    log4cxx::BasicConfigurator::resetConfiguration();
     log4cxx::BasicConfigurator::configure();
     log4cxx::Logger::getRootLogger()->setLevel(log4cxx::Level::getInfo());
 
