@@ -23,7 +23,8 @@ class Booru
     // Management
     // ////////////////////////////////////////////////////////////////////////////////////////////
 
-    Expected<DB::TEXT> GetConfig( DB::TEXT const & _Key );
+    Expected<DB::TEXT> GetConfig( DB::TEXT const & _Name );
+    ResultCode SetConfig( DB::TEXT const & _Name, DB::TEXT const & _Value );
     Expected<DB::INTEGER> GetConfigInt64( DB::TEXT const & _Key );
     ResultCode CreateTables();
 

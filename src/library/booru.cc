@@ -33,6 +33,8 @@ Owning<Booru> Booru::InitializeLibrary()
 Booru::Booru()
 {
     log4cxx::BasicConfigurator::configure();
+    log4cxx::Logger::getRootLogger()->setLevel(log4cxx::Level::getInfo());
+
     LOG_INFO( "Booru library initialized" );
 }
 
@@ -74,13 +76,14 @@ ResultCode Booru::OpenDatabase( StringView const & _Path, bool _Create )
                                       "Missing database version even after table creation." );
     }
 
+    LOG_INFO( "Sucessfully opened database. Version {}", dbVersion.Value );
+
     for ( DB::INTEGER i = dbVersion.Value; i < k_SQLSchemaVersion; i++ )
     {
         LOG_INFO( "Upgrading database schema to version {}...", i );
         CHECK_RETURN_RESULT_ON_ERROR( UpdateTables( i ) );
     }
 
-    LOG_INFO( "Sucessfully opened database." );
     return ResultCode::OK;
 }
 
@@ -101,10 +104,22 @@ Expected<DB::TEXT> Booru::GetConfig( DB::TEXT const& _Name )
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Value->BindValue( "Name", _Name ) );
 
     Expected<DB::TEXT> value = stmt.Value->ExecuteScalar<DB::TEXT>();
-    LOG_INFO( "Config {} = '{}'", _Name, value.Value );
     CHECK_RETURN_RESULT_ON_ERROR( value );
     return value;
 }
+
+ResultCode Booru::SetConfig( DB::TEXT const & _Name, DB::TEXT const & _Value )
+{
+    auto stmt = DB::Query::Upsert( "Config" ).Column( "Value" ).Column( "Name" ).Prepare( *m_DB );
+    CHECK_RETURN_RESULT_ON_ERROR( stmt );
+    CHECK_RETURN_RESULT_ON_ERROR( stmt.Value->BindValue( "Name", _Name ) );
+    CHECK_RETURN_RESULT_ON_ERROR( stmt.Value->BindValue( "Value", _Value ) );
+
+    ResultCode result = stmt.Value->Step(false);
+    CHECK( result );
+    return result;
+}
+
 
 Expected<DB::INTEGER> Booru::GetConfigInt64( DB::TEXT const& _Key )
 {
