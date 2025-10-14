@@ -5,3 +5,4 @@ enable_testing( )
 option( BUILD_STATIC "Build static library" OFF )
 
 add_subdirectory( "src" )
+add_subdirectory( "tests" )
