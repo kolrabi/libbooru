@@ -138,7 +138,14 @@ class Insert : public Query<Insert>
 
     std::string ToString() override
     {
-        std::string sqlString = "INSERT INTO " + Table + "\n(";
+        std::string sqlString = "INSERT INTO " + Table + Values();
+        return sqlString;
+    }
+
+  protected:
+    String Values()
+    {
+        String sqlString = "\n(";
 
         bool first = true;
         for ( auto const& col : Columns )
@@ -163,6 +170,20 @@ class Insert : public Query<Insert>
             first = false;
         }
         sqlString += ")\n";
+        return sqlString;
+
+    }
+};
+
+// Simple insert query. Inserts given columns.
+class Upsert : public Insert
+{
+  public:
+    Upsert( StringView const & _Table ) : Insert{ _Table } {}
+
+    String ToString() override
+    {
+        String sqlString = "INSERT OR REPLACE INTO " + Table + Values();
         return sqlString;
     }
 };
