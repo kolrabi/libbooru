@@ -1,4 +1,5 @@
 find_package(SQLite3 REQUIRED)
+find_package(log4cxx REQUIRED)
 
 set( booru_public_headers
     include/booru/booru.hh
@@ -56,12 +57,10 @@ set_target_properties(booru PROPERTIES
 )
 
 target_include_directories( booru PRIVATE include )
-target_include_directories( booru PRIVATE ${SQLite3_INCLUDE_DIRS} )
-target_include_directories( booru PRIVATE ${log4cxx_INCLUDE_DIRS} )
 target_include_directories( booru PUBLIC include/public )
 
-target_link_libraries( booru ${SQLite3_LIBRARIES} )
-target_link_libraries( booru PRIVATE ${log4cxx_LIBRARIES} )
+target_link_libraries( booru LINK_PUBLIC SQLite::SQLite3 )
+target_link_libraries( booru LINK_PUBLIC log4cxx )
 
 install(TARGETS booru
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} 
