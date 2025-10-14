@@ -78,7 +78,7 @@ class DatabasePreparedStatementInterface
     /// @tparam TEntity Type of entity to return.
     /// @return The expected entities or an error.
     template <class TEntity>
-    ExpectedList<TEntity> ExecuteList();
+    ExpectedVector<TEntity> ExecuteList();
 };
 
 // ////////////////////////////////////////////////////////////////////////////////////////////
@@ -178,9 +178,9 @@ Expected<TEntity> DatabasePreparedStatementInterface::ExecuteRow( bool _NeedRow 
 }
 
 template <class TEntity>
-ExpectedList<TEntity> DatabasePreparedStatementInterface::ExecuteList()
+ExpectedVector<TEntity> DatabasePreparedStatementInterface::ExecuteList()
 {
-    std::vector<TEntity> values;
+    Vector<TEntity> values;
 
     auto stepResult = Step();
     CHECK_RETURN_RESULT_ON_ERROR( stepResult );

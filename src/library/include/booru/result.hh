@@ -87,7 +87,7 @@ using ExpectedOwning = Expected<Owning<TValue>>;
 template <class TValue>
 using ExpectedShared = Expected<Shared<TValue>>;
 template <class TValue>
-using ExpectedList = Expected<std::vector<TValue>>;
+using ExpectedVector = Expected<std::vector<TValue>>;
 
 // helper functions for result checking and logging 
 

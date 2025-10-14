@@ -152,7 +152,7 @@ ResultCode Booru::CreatePostType( DB::Entities::PostType& _PostType )
     return DB::Entities::Create( *m_DB, _PostType );
 }
 
-ExpectedList<DB::Entities::PostType> Booru::GetPostTypes()
+ExpectedVector<DB::Entities::PostType> Booru::GetPostTypes()
 {
     return DB::Entities::GetAll<DB::Entities::PostType>( *m_DB );
 }
@@ -186,7 +186,7 @@ ResultCode Booru::CreatePost( DB::Entities::Post& _Post )
     return DB::Entities::Create( *m_DB, _Post ); 
 }
 
-ExpectedList<DB::Entities::Post> Booru::GetPosts()
+ExpectedVector<DB::Entities::Post> Booru::GetPosts()
 {
     auto result = DB::Entities::GetAll<DB::Entities::Post>( *m_DB );
     CHECK_RETURN_RESULT_ON_ERROR( result, "Failed to get posts" );
@@ -270,7 +270,7 @@ ResultCode Booru::AddTagToPost( DB::INTEGER _PostId, StringView const & _Tag )
     }
 
     // try to honor implications, ignore errors
-    ExpectedList<DB::Entities::TagImplication> implications =
+    ExpectedVector<DB::Entities::TagImplication> implications =
         GetTagImplicationsForTag( tag.Value.Id );
     CHECK_RETURN_RESULT_ON_ERROR( implications );
     for ( auto const& implication : implications.Value )
@@ -299,7 +299,7 @@ ResultCode Booru::AddTagToPost( DB::INTEGER _PostId, StringView const & _Tag )
     return ResultCode::OK;
 }
 
-ExpectedList<DB::Entities::Post> Booru::FindPosts( StringView const & _QueryString )
+ExpectedVector<DB::Entities::Post> Booru::FindPosts( StringView const & _QueryString )
 {
     StringVector queryStringTokens = Strings::Split( _QueryString );
     if ( queryStringTokens.empty() )
@@ -313,7 +313,7 @@ ExpectedList<DB::Entities::Post> Booru::FindPosts( StringView const & _QueryStri
         WHERE
     )SQL";
 
-    std::vector<String> conditionStrings;
+    StringVector conditionStrings;
     for ( auto const& tag : queryStringTokens )
     {
         conditionStrings.push_back( GetSQLConditionForTag( tag ) );
@@ -321,7 +321,7 @@ ExpectedList<DB::Entities::Post> Booru::FindPosts( StringView const & _QueryStri
 
     SQL += Strings::Join( conditionStrings, " AND \n" );
 
-    auto stmt = m_DB->PrepareStatement( SQL.c_str() );
+    auto stmt = m_DB->PrepareStatement( SQL );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Code );
     return stmt.Value->ExecuteList<DB::Entities::Post>();
 }
@@ -339,7 +339,7 @@ ResultCode Booru::CreatePostTag( DB::Entities::PostTag& _PostTag )
     return stmt.Value->Step();
 }
 
-ExpectedList<DB::Entities::PostTag> Booru::GetPostTags() 
+ExpectedVector<DB::Entities::PostTag> Booru::GetPostTags() 
 { 
     return DB::Entities::GetAll<DB::Entities::PostTag>( *m_DB ); 
 }
@@ -353,7 +353,7 @@ ResultCode Booru::DeletePostTag( DB::Entities::PostTag& _PostTag )
     return stmt.Value->Step();
 }
 
-ExpectedList<DB::Entities::Tag> Booru::GetTagsForPost( DB::INTEGER _PostId )
+ExpectedVector<DB::Entities::Tag> Booru::GetTagsForPost( DB::INTEGER _PostId )
 {
     auto stmt = m_DB->PrepareStatement( R"SQL(
         SELECT * FROM Tags WHERE Tags.Id IN
@@ -364,7 +364,7 @@ ExpectedList<DB::Entities::Tag> Booru::GetTagsForPost( DB::INTEGER _PostId )
     return stmt.Value->ExecuteList<DB::Entities::Tag>();
 }
 
-ExpectedList<DB::Entities::Post> Booru::GetPostsForTag( DB::INTEGER _TagId )
+ExpectedVector<DB::Entities::Post> Booru::GetPostsForTag( DB::INTEGER _TagId )
 {
     auto stmt = m_DB->PrepareStatement( R"SQL(
         SELECT * FROM Posts WHERE Posts.Id IN
@@ -384,12 +384,12 @@ ResultCode Booru::CreatePostFile( DB::Entities::PostFile& _PostFile )
     return DB::Entities::Create( *m_DB, _PostFile );
 }
 
-ExpectedList<DB::Entities::PostFile> Booru::GetPostFiles()
+ExpectedVector<DB::Entities::PostFile> Booru::GetPostFiles()
 {
     return DB::Entities::GetAll<DB::Entities::PostFile>( *m_DB );
 }
 
-ExpectedList<DB::Entities::PostFile> Booru::GetFilesForPost( DB::INTEGER _PostId )
+ExpectedVector<DB::Entities::PostFile> Booru::GetFilesForPost( DB::INTEGER _PostId )
 {
     return DB::Entities::GetAllWithKey<DB::Entities::PostFile>( *m_DB, "PostId", _PostId );
 }
@@ -408,12 +408,12 @@ ResultCode Booru::CreatePostSiteId( DB::Entities::PostSiteId& _PostSiteId )
     return DB::Entities::Create( *m_DB, _PostSiteId );
 }
 
-ExpectedList<DB::Entities::PostSiteId> Booru::GetPostSiteIds()
+ExpectedVector<DB::Entities::PostSiteId> Booru::GetPostSiteIds()
 {
     return DB::Entities::GetAll<DB::Entities::PostSiteId>( *m_DB );
 }
 
-ExpectedList<DB::Entities::PostSiteId> Booru::GetPostSiteIdsForPost( DB::INTEGER _PostId )
+ExpectedVector<DB::Entities::PostSiteId> Booru::GetPostSiteIdsForPost( DB::INTEGER _PostId )
 {
     return DB::Entities::GetAllWithKey<DB::Entities::PostSiteId>( *m_DB, "PostId", _PostId );
 }
@@ -449,7 +449,7 @@ ResultCode Booru::DeleteSite( DB::Entities::Site& _Site ) { return DB::Entities:
 
 ResultCode Booru::CreateTag( DB::Entities::Tag& _Tag ) { return DB::Entities::Create( *m_DB, _Tag ); }
 
-ExpectedList<DB::Entities::Tag> Booru::GetTags() { return DB::Entities::GetAll<DB::Entities::Tag>( *m_DB ); }
+ExpectedVector<DB::Entities::Tag> Booru::GetTags() { return DB::Entities::GetAll<DB::Entities::Tag>( *m_DB ); }
 
 Expected<DB::Entities::Tag> Booru::GetTag( DB::INTEGER _Id )
 {
@@ -465,7 +465,7 @@ ResultCode Booru::UpdateTag( DB::Entities::Tag& _Tag ) { return DB::Entities::Up
 
 ResultCode Booru::DeleteTag( DB::Entities::Tag& _Tag ) { return DB::Entities::Delete( *m_DB, _Tag ); }
 
-ExpectedList<DB::Entities::Tag> Booru::MatchTags( DB::TEXT& _Pattern )
+ExpectedVector<DB::Entities::Tag> Booru::MatchTags( DB::TEXT& _Pattern )
 {
     String pattern = _Pattern;
 
@@ -537,12 +537,12 @@ ResultCode Booru::CreateTagImplication( DB::Entities::TagImplication& _TagImplic
     return DB::Entities::Create( *m_DB, _TagImplication );
 }
 
-ExpectedList<DB::Entities::TagImplication> Booru::GetTagImplications()
+ExpectedVector<DB::Entities::TagImplication> Booru::GetTagImplications()
 {
     return DB::Entities::GetAll<DB::Entities::TagImplication>( *m_DB );
 }
 
-ExpectedList<DB::Entities::TagImplication> Booru::GetTagImplicationsForTag( DB::INTEGER _TagId )
+ExpectedVector<DB::Entities::TagImplication> Booru::GetTagImplicationsForTag( DB::INTEGER _TagId )
 {
     return DB::Entities::GetAllWithKey<DB::Entities::TagImplication>( *m_DB, "TagId", _TagId );
 }
@@ -553,7 +553,7 @@ ExpectedList<DB::Entities::TagImplication> Booru::GetTagImplicationsForTag( DB::
 
 ResultCode Booru::CreateTagType( DB::Entities::TagType& _TagType ) { return DB::Entities::Create( *m_DB, _TagType ); }
 
-ExpectedList<DB::Entities::TagType> Booru::GetTagTypes() { return DB::Entities::GetAll<DB::Entities::TagType>( *m_DB ); }
+ExpectedVector<DB::Entities::TagType> Booru::GetTagTypes() { return DB::Entities::GetAll<DB::Entities::TagType>( *m_DB ); }
 
 Expected<DB::Entities::TagType> Booru::GetTagType( DB::INTEGER _Id )
 {
@@ -618,7 +618,7 @@ Expected<String> Booru::GetSQLConditionForTag( String _Tag )
 
     // match actual tags
 
-    ExpectedList<DB::Entities::Tag> tags = MatchTags( _Tag );
+    ExpectedVector<DB::Entities::Tag> tags = MatchTags( _Tag );
     CHECK_RETURN_RESULT_ON_ERROR( tags );
 
     return "( "

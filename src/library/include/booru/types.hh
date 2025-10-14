@@ -13,6 +13,8 @@
 namespace Booru
 {
 
+using namespace std::string_literals;
+
 // forwad declarations 
 class Booru;
 enum class [[nodiscard]] ResultCode : int32_t;

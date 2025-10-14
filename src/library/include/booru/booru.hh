@@ -33,7 +33,7 @@ class Booru
     // ////////////////////////////////////////////////////////////////////////////////////////////
 
     ResultCode CreatePostType( DB::Entities::PostType& _PostType );
-    ExpectedList<DB::Entities::PostType> GetPostTypes();
+    ExpectedVector<DB::Entities::PostType> GetPostTypes();
     Expected<DB::Entities::PostType> GetPostType( DB::INTEGER _Id );
     Expected<DB::Entities::PostType> GetPostType( DB::TEXT const & _Name );
     ResultCode UpdatePostType( DB::Entities::PostType& _PostType );
@@ -44,33 +44,33 @@ class Booru
     // ////////////////////////////////////////////////////////////////////////////////////////////
 
     ResultCode CreatePost( DB::Entities::Post& _Post );
-    ExpectedList<DB::Entities::Post> GetPosts();
+    ExpectedVector<DB::Entities::Post> GetPosts();
     Expected<DB::Entities::Post> GetPost( DB::INTEGER _Id );
     Expected<DB::Entities::Post> GetPost( DB::BLOB<16> _Id );
     ResultCode UpdatePost( DB::Entities::Post& _Post );
     ResultCode DeletePost( DB::Entities::Post& _Post );
 
     ResultCode AddTagToPost( DB::INTEGER _PostId, StringView const & _Tag );
-    ExpectedList<DB::Entities::Post> FindPosts( StringView const & _QueryString );
+    ExpectedVector<DB::Entities::Post> FindPosts( StringView const & _QueryString );
 
     // ////////////////////////////////////////////////////////////////////////////////////////////
     // PostTags
     // ////////////////////////////////////////////////////////////////////////////////////////////
 
     ResultCode CreatePostTag( DB::Entities::PostTag& _PostType );
-    ExpectedList<DB::Entities::PostTag> GetPostTags();
+    ExpectedVector<DB::Entities::PostTag> GetPostTags();
     ResultCode DeletePostTag( DB::Entities::PostTag& _PostTag );
 
-    ExpectedList<DB::Entities::Tag> GetTagsForPost( DB::INTEGER _PostId );
-    ExpectedList<DB::Entities::Post> GetPostsForTag( DB::INTEGER _TagId );
+    ExpectedVector<DB::Entities::Tag> GetTagsForPost( DB::INTEGER _PostId );
+    ExpectedVector<DB::Entities::Post> GetPostsForTag( DB::INTEGER _TagId );
 
     // ////////////////////////////////////////////////////////////////////////////////////////////
     // PostFiles
     // ////////////////////////////////////////////////////////////////////////////////////////////
 
     ResultCode CreatePostFile( DB::Entities::PostFile& _PostFile );
-    ExpectedList<DB::Entities::PostFile> GetPostFiles();
-    ExpectedList<DB::Entities::PostFile> GetFilesForPost( DB::INTEGER _PostId );
+    ExpectedVector<DB::Entities::PostFile> GetPostFiles();
+    ExpectedVector<DB::Entities::PostFile> GetFilesForPost( DB::INTEGER _PostId );
     ResultCode DeletePostFile( DB::Entities::PostFile& _PostFile );
 
     // ////////////////////////////////////////////////////////////////////////////////////////////
@@ -78,8 +78,8 @@ class Booru
     // ////////////////////////////////////////////////////////////////////////////////////////////
 
     ResultCode CreatePostSiteId( DB::Entities::PostSiteId& _PostSiteId );
-    ExpectedList<DB::Entities::PostSiteId> GetPostSiteIds();
-    ExpectedList<DB::Entities::PostSiteId> GetPostSiteIdsForPost( DB::INTEGER _PostId );
+    ExpectedVector<DB::Entities::PostSiteId> GetPostSiteIds();
+    ExpectedVector<DB::Entities::PostSiteId> GetPostSiteIdsForPost( DB::INTEGER _PostId );
     ResultCode DeletePostSiteId( DB::Entities::PostSiteId& _PostSiteId );
 
     // ////////////////////////////////////////////////////////////////////////////////////////////
@@ -97,28 +97,28 @@ class Booru
     // ////////////////////////////////////////////////////////////////////////////////////////////
 
     ResultCode CreateTag( DB::Entities::Tag& _Tag );
-    ExpectedList<DB::Entities::Tag> GetTags();
+    ExpectedVector<DB::Entities::Tag> GetTags();
     Expected<DB::Entities::Tag> GetTag( DB::INTEGER _Id );
     Expected<DB::Entities::Tag> GetTag( DB::TEXT const & _Name );
     ResultCode UpdateTag( DB::Entities::Tag& _Tag );
     ResultCode DeleteTag( DB::Entities::Tag& _Tag );
 
-    ExpectedList<DB::Entities::Tag> MatchTags( DB::TEXT& _Pattern );
+    ExpectedVector<DB::Entities::Tag> MatchTags( DB::TEXT& _Pattern );
 
     // ////////////////////////////////////////////////////////////////////////////////////////////
     // TagImplications
     // ////////////////////////////////////////////////////////////////////////////////////////////
 
     ResultCode CreateTagImplication( DB::Entities::TagImplication& _TagImplication );
-    ExpectedList<DB::Entities::TagImplication> GetTagImplications();
-    ExpectedList<DB::Entities::TagImplication> GetTagImplicationsForTag( DB::INTEGER _TagId );
+    ExpectedVector<DB::Entities::TagImplication> GetTagImplications();
+    ExpectedVector<DB::Entities::TagImplication> GetTagImplicationsForTag( DB::INTEGER _TagId );
 
     // ////////////////////////////////////////////////////////////////////////////////////////////
     // TagTypes
     // ////////////////////////////////////////////////////////////////////////////////////////////
 
     ResultCode CreateTagType( DB::Entities::TagType& _TagType );
-    ExpectedList<DB::Entities::TagType> GetTagTypes();
+    ExpectedVector<DB::Entities::TagType> GetTagTypes();
     Expected<DB::Entities::TagType> GetTagType( DB::INTEGER _Id );
     Expected<DB::Entities::TagType> GetTagType( DB::TEXT const & _Name );
     ResultCode UpdateTagType( DB::Entities::TagType& _TagType );

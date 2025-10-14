@@ -192,7 +192,7 @@ ExpectedOwning<DatabaseInterface> DatabaseSqlite3::OpenDatabase( StringView cons
     int sqlite_result  = sqlite3_open( String( _Path ).c_str(), &db_handle );
     if ( sqlite_result == SQLITE_OK )
     {
-        return { std::make_unique<DatabaseSqlite3>( db_handle ) };
+        return { MakeOwning<DatabaseSqlite3>( db_handle ) };
     }
     return Sqlite3ToResult( sqlite_result );
 }

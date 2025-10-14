@@ -75,7 +75,7 @@ Expected<TEntity> GetWithKey( DB::DatabaseInterface& _DB, StringView const & _Ke
 
 /// @brief Retrieve all entities of a given type from the database. If no entities are found, an empty list will be returned. On error an error code is returned.
 template <class TEntity>
-ExpectedList<TEntity> GetAll( DB::DatabaseInterface& _DB )
+ExpectedVector<TEntity> GetAll( DB::DatabaseInterface& _DB )
 {
     auto stmt = DB::Query::Select( TEntity::Table ).Prepare( _DB );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Code );
@@ -84,7 +84,7 @@ ExpectedList<TEntity> GetAll( DB::DatabaseInterface& _DB )
 
 /// @brief Retrieve all entities of a given type from the database that match the given key in the given column. If no entities are found, an empty list will be returned. On error an error code is returned.
 template <class TEntity, class TValue>
-ExpectedList<TEntity> GetAllWithKey( DB::DatabaseInterface& _DB, StringView const & _KeyColumn,
+ExpectedVector<TEntity> GetAllWithKey( DB::DatabaseInterface& _DB, StringView const & _KeyColumn,
                                           TValue const& _KeyValue )
 {
     auto stmt = DB::Query::Select( TEntity::Table ).Key( _KeyColumn ).Prepare( _DB );

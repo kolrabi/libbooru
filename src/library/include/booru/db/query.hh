@@ -36,7 +36,7 @@ class Query
 
     Query( StringView const & _Table ) : Table{ _Table } {}
 
-    virtual std::string ToString() = 0;
+    virtual String ToString() = 0;
 
     // Tries to prepare the query into a statement.
     ExpectedOwning<DatabasePreparedStatementInterface> Prepare( DatabaseInterface& _DB )
@@ -100,9 +100,9 @@ class Select : public Query<Select>
   public:
     Select( StringView const & _Table ) : Query{ _Table } {}
 
-    std::string ToString() override
+    String ToString() override
     {
-        std::string sqlString = "SELECT ";
+        String sqlString = "SELECT ";
         if ( Columns.empty() )
         {
             sqlString += "* \n";
@@ -136,10 +136,9 @@ class Insert : public Query<Insert>
   public:
     Insert( StringView const & _Table ) : Query{ _Table } {}
 
-    std::string ToString() override
+    String ToString() override
     {
-        std::string sqlString = "INSERT INTO " + Table + Values();
-        return sqlString;
+        return "INSERT INTO "s + Table + Values();
     }
 
   protected:
@@ -183,8 +182,7 @@ class Upsert : public Insert
 
     String ToString() override
     {
-        String sqlString = "INSERT OR REPLACE INTO " + Table + Values();
-        return sqlString;
+        return "INSERT OR REPLACE INTO "s + Table + Values();
     }
 };
 
@@ -194,9 +192,9 @@ class Update : public Query<Update>
   public:
     Update( StringView const & _Table ) : Query{ _Table } {}
 
-    std::string ToString() override
+    String ToString() override
     {
-        std::string sqlString = "UPDATE " + Table + "\nSET ";
+        String sqlString = "UPDATE " + Table + "\nSET ";
 
         bool first = true;
         for ( auto const& col : Columns )
@@ -228,8 +226,7 @@ class Delete : public Query<Delete>
             return "--";
         }
 
-        String sqlString = "DELETE FROM " + Table + " " + GetWhereString();
-        return sqlString;
+        return "DELETE FROM "s + Table + " " + GetWhereString();
     }
 };
 

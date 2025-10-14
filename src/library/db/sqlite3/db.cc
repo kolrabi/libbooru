@@ -37,7 +37,9 @@ DatabaseSqlite3::PrepareStatement( StringView const & _SQL )
     int sqlite_result         = sqlite3_prepare_v3( m_Handle, String(_SQL).c_str(), -1, 0, &stmt_handle, nullptr );
     if ( sqlite_result == SQLITE_OK )
     {
-        return { std::make_unique<DatabasePreparedStatementSqlite3>( stmt_handle ) };
+        LOG_DEBUG("Prepared statement: SQL was:\n{}", _SQL);
+
+        return { MakeOwning<DatabasePreparedStatementSqlite3>( stmt_handle ) };
     }
 
     LOG_ERROR("Prepare statement failed with sqlite3 error code {}, SQL was:\n{}", sqlite_result, _SQL);
