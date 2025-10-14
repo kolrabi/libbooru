@@ -83,5 +83,8 @@
         "cinttypes": "cpp",
         "typeindex": "cpp",
         "typeinfo": "cpp"
+    },
+    "cmake.configureEnvironment": {
+        "CODE_COVERAGE": "ON"
     }
 }
