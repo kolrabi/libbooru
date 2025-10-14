@@ -1,6 +1,6 @@
 #pragma once
 
-#include "booru/common.hh"
+#include <booru/common.hh>
 
 // Hash functions for different types of hashes. These are meant for uniquely identifying
 // files, not for cryptographically secure operations.

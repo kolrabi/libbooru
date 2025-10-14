@@ -96,7 +96,7 @@ DB::DatabaseInterface& Booru::GetDatabase()
 
 Expected<DB::TEXT> Booru::GetConfig( DB::TEXT const& _Name )
 {
-    auto stmt = DB::Select( "Config" ).Column( "Value" ).Key( "Name" ).Prepare( *m_DB );
+    auto stmt = DB::Query::Select( "Config" ).Column( "Value" ).Key( "Name" ).Prepare( *m_DB );
     CHECK_RETURN_RESULT_ON_ERROR( stmt );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Value->BindValue( "Name", _Name ) );
 
@@ -317,7 +317,7 @@ ExpectedList<DB::Entities::Post> Booru::FindPosts( StringView const & _QueryStri
 
 ResultCode Booru::CreatePostTag( DB::Entities::PostTag& _PostTag )
 {
-    auto stmt = DB::Insert( "PostTags" ).Column( "PostId" ).Column( "TagId" ).Prepare( *m_DB );
+    auto stmt = DB::Query::Insert( "PostTags" ).Column( "PostId" ).Column( "TagId" ).Prepare( *m_DB );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Code );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Value->BindValue( "PostId", _PostTag.PostId ) );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Value->BindValue( "TagId", _PostTag.TagId ) );
@@ -331,7 +331,7 @@ ExpectedList<DB::Entities::PostTag> Booru::GetPostTags()
 
 ResultCode Booru::DeletePostTag( DB::Entities::PostTag& _PostTag )
 {
-    auto stmt = DB::Delete( "PostTags" ).Key( "PostId" ).Key( "TagId" ).Prepare( *m_DB );
+    auto stmt = DB::Query::Delete( "PostTags" ).Key( "PostId" ).Key( "TagId" ).Prepare( *m_DB );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Code );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Value->BindValue( "PostId", _PostTag.PostId ) );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Value->BindValue( "TagId", _PostTag.TagId ) );

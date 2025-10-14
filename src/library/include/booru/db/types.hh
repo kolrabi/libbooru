@@ -20,7 +20,7 @@ using FLOAT   = double;
 template <int N>
 using BLOB = ByteArray<N>;
 template <class TValue>
-using NULLABLE = std::optional<TValue>;
+using NULLABLE = Optional<TValue>;
 using MD5BLOB  = MD5Sum;
 
 }

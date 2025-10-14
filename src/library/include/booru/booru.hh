@@ -1,8 +1,7 @@
 #pragma once
 
-#include "booru/db/entity.hh"
-#include "common.hh"
-#include "result.hh"
+#include <booru/db/entity.hh>
+#include <booru/common.hh>
 
 class DatabaseInterface;
 

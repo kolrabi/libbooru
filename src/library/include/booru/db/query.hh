@@ -1,35 +1,9 @@
 #pragma once
 
 #include <booru/db.hh>
+#include <booru/db/visitors.hh>
 
-namespace Booru::DB::Visitors
-{
-
-// Visitor that add all properties of an entity (except the primary key) to a query as a column. For
-// update queries.
-template <class Q>
-class DBQueryNonPrimaryKeyColumnVisitor final
-{
-  public:
-    DBQueryNonPrimaryKeyColumnVisitor( Q& _Query ) : Query{ _Query } {}
-
-    template <class TValue>
-    ResultCode Property( StringView const & _Name, TValue& _Value, bool _IsPrimaryKey = false )
-    {
-        if ( !_IsPrimaryKey )
-        {
-            Query.Column( _Name );
-        }
-        return ResultCode::OK;
-    }
-
-  private:
-    Q& Query;
-};
-
-} // namespace Booru::DB::Visitors
-
-namespace Booru::DB
+namespace Booru::DB::Query
 {
 
 // Abstract where condition for queries.
@@ -156,6 +130,7 @@ class Select : public Query<Select>
     }
 };
 
+// Simple insert query. Inserts given columns.
 class Insert : public Query<Insert>
 {
   public:
@@ -192,6 +167,7 @@ class Insert : public Query<Insert>
     }
 };
 
+// Simple update query. Updates given columns with values.
 class Update : public Query<Update>
 {
   public:
@@ -216,6 +192,7 @@ class Update : public Query<Update>
     }
 };
 
+// Simple delete query. Deletes rows that match keys and values. Will not delete all rows if no key is given.
 class Delete : public Query<Delete>
 {
   public:
@@ -235,24 +212,26 @@ class Delete : public Query<Delete>
     }
 };
 
+// Query to insert a new entity into the database.
 template <class TValue>
 class InsertEntity : public Insert
 {
   public:
     InsertEntity( StringView const & _Table, TValue& _Entity ) : Insert( _Table )
     {
-        auto Visitor = Visitors::DBQueryNonPrimaryKeyColumnVisitor( *this );
+        auto Visitor = Visitors::QueryNonPrimaryKeyColumnVisitor( *this );
         auto result  = _Entity.IterateProperties( Visitor );
     }
 };
 
+// Query to update a entity property values in the database.
 template <class TValue>
 class UpdateEntity : public Update
 {
   public:
     UpdateEntity( StringView const & _Table, TValue& _Entity ) : Update( _Table )
     {
-        auto Visitor = Visitors::DBQueryNonPrimaryKeyColumnVisitor( *this );
+        auto Visitor = Visitors::QueryNonPrimaryKeyColumnVisitor( *this );
         auto result  = _Entity.IterateProperties( Visitor );
     }
 };

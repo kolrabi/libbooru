@@ -6,13 +6,21 @@
 namespace Booru::DB::Visitors
 {
 
-// Visitor that loads data from a statement into an entity property.
-class LoadFromStatementPropertyVisitor
+// Statement property visitor base class
+class StatementPropertyVisitor
 {
   public:
-    LoadFromStatementPropertyVisitor( DB::DatabasePreparedStatementInterface& _Stmt ) : Stmt{ _Stmt } {}
+    StatementPropertyVisitor( DB::DatabasePreparedStatementInterface& _Stmt ) : Stmt{ _Stmt } {}
 
+  protected:
     DB::DatabasePreparedStatementInterface& Stmt;
+};
+
+// Visitor that loads data from a statement into an entity property.
+class LoadFromStatementPropertyVisitor : private StatementPropertyVisitor
+{
+  public:
+    using StatementPropertyVisitor::StatementPropertyVisitor;
 
     template <class TValue>
     ResultCode Property( StringView const & _Name, TValue& _Value, bool _IsPrimaryKey = false )
@@ -22,12 +30,10 @@ class LoadFromStatementPropertyVisitor
 };
 
 // Visitor that binds data from an entity property to a statement.
-class StoreToStatementPropertyVisitor
+class StoreToStatementPropertyVisitor : private StatementPropertyVisitor
 {
   public:
-    StoreToStatementPropertyVisitor( DB::DatabasePreparedStatementInterface& _Stmt ) : Stmt{ _Stmt } {}
-
-    DB::DatabasePreparedStatementInterface& Stmt;
+    using StatementPropertyVisitor::StatementPropertyVisitor;
 
     template <class TValue>
     ResultCode Property( StringView const & _Name, TValue& _Value, bool _IsPrimaryKey = false )
@@ -36,7 +42,29 @@ class StoreToStatementPropertyVisitor
     }
 };
 
-// Visitor that converts data into a printable string.
+// Visitor that add all properties of an entity (except the primary key) to a query as a column. For
+// update queries.
+template <class TQuery>
+class QueryNonPrimaryKeyColumnVisitor final
+{
+  public:
+    QueryNonPrimaryKeyColumnVisitor( TQuery& _Query ) : Query { _Query } { }
+
+    template <class TValue>
+    ResultCode Property( StringView const & _Name, TValue& _Value, bool _IsPrimaryKey = false )
+    {
+        if ( !_IsPrimaryKey )
+        {
+            this->Query.Column( _Name );
+        }
+        return ResultCode::OK;
+    }
+
+  private:
+    TQuery& Query;
+};
+
+/// (Debug tool) Visitor that converts data into a printable string.
 class ToStringPropertyVisitor
 {
   public:

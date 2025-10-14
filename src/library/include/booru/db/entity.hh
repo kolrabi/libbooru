@@ -55,7 +55,7 @@ Vector<DB::INTEGER> CollectIds( Vector<TEntity> const& _Entities )
 template <class TEntity>
 ResultCode Create( DB::DatabaseInterface& _DB, TEntity& _Entity )
 {
-    auto stmt = DB::InsertEntity<TEntity>( TEntity::Table, _Entity ).Prepare( _DB );
+    auto stmt = DB::Query::InsertEntity<TEntity>( TEntity::Table, _Entity ).Prepare( _DB );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Code );
     CHECK_RETURN_RESULT_ON_ERROR( StoreEntity( _Entity, *stmt.Value ) );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Value->Step() );
@@ -66,7 +66,7 @@ ResultCode Create( DB::DatabaseInterface& _DB, TEntity& _Entity )
 template <class TEntity, class TValue>
 Expected<TEntity> GetWithKey( DB::DatabaseInterface& _DB, StringView const & _KeyColumn, TValue const& _KeyValue )
 {
-    auto stmt = DB::Select( TEntity::Table ).Key( _KeyColumn ).Prepare( _DB );
+    auto stmt = DB::Query::Select( TEntity::Table ).Key( _KeyColumn ).Prepare( _DB );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Code );
     CHECK_RETURN_RESULT_ON_ERROR(
         stmt.Value->BindValue( _KeyColumn, _KeyValue ) );
@@ -77,7 +77,7 @@ Expected<TEntity> GetWithKey( DB::DatabaseInterface& _DB, StringView const & _Ke
 template <class TEntity>
 ExpectedList<TEntity> GetAll( DB::DatabaseInterface& _DB )
 {
-    auto stmt = DB::Select( TEntity::Table ).Prepare( _DB );
+    auto stmt = DB::Query::Select( TEntity::Table ).Prepare( _DB );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Code );
     return stmt.Value->ExecuteList<TEntity>();
 }
@@ -87,7 +87,7 @@ template <class TEntity, class TValue>
 ExpectedList<TEntity> GetAllWithKey( DB::DatabaseInterface& _DB, StringView const & _KeyColumn,
                                           TValue const& _KeyValue )
 {
-    auto stmt = DB::Select( TEntity::Table ).Key( _KeyColumn ).Prepare( _DB );
+    auto stmt = DB::Query::Select( TEntity::Table ).Key( _KeyColumn ).Prepare( _DB );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Code );
     CHECK_RETURN_RESULT_ON_ERROR(
         stmt.Value->BindValue( _KeyColumn, _KeyValue ) );
@@ -103,7 +103,7 @@ ResultCode Update( DB::DatabaseInterface& _DB, TEntity& _Entity )
         return ResultCode::InvalidEntityId;
     }
 
-    auto stmt = DB::UpdateEntity( TEntity::Table, _Entity ).Key( "Id" ).Prepare( _DB );
+    auto stmt = DB::Query::UpdateEntity( TEntity::Table, _Entity ).Key( "Id" ).Prepare( _DB );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Code );
     CHECK_RETURN_RESULT_ON_ERROR( StoreEntity( _Entity, *stmt.Value ) );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Value->BindValue( "Id", _Entity.Id ) );
@@ -119,7 +119,7 @@ static ResultCode Delete( DB::DatabaseInterface& _DB, TEntity& _Entity )
         return ResultCode::InvalidEntityId;
     }
 
-    auto stmt = DB::Delete( TEntity::Table ).Key( "Id" ).Prepare( _DB );
+    auto stmt = DB::Query::Delete( TEntity::Table ).Key( "Id" ).Prepare( _DB );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Code );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Value->BindValue( "Id", _Entity.Id ) );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Value->Step() );
