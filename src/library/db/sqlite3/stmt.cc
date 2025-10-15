@@ -183,18 +183,4 @@ ResultCode DatabasePreparedStatementSqlite3::Step( bool _NeedRow )
     return resultCode;
 }
 
-// ----------------------------------------------------------------
-// DatabaseSqlite3
-
-ExpectedOwning<DatabaseInterface> DatabaseSqlite3::OpenDatabase( StringView const & _Path )
-{
-    sqlite3* db_handle = nullptr;
-    int sqlite_result  = sqlite3_open( String( _Path ).c_str(), &db_handle );
-    if ( sqlite_result == SQLITE_OK )
-    {
-        return { MakeOwning<DatabaseSqlite3>( db_handle ) };
-    }
-    return Sqlite3ToResult( sqlite_result );
-}
-
 } // namespace Booru::DB::Sqlite3
