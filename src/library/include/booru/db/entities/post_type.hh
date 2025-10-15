@@ -5,7 +5,7 @@
 namespace Booru::DB::Entities
 {
 
-struct PostType : public Entity
+struct PostType : public Entity<PostType>
 {
     static char const constexpr* Table = "PostTypes";
     static char const constexpr* LOGGER = "booru.db.entites.posttypes";

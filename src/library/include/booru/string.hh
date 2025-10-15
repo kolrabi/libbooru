@@ -4,6 +4,31 @@
 
 #include <sstream>
 
+// formatter for optional values
+template<class TValue>
+struct std::formatter<Booru::Optional<TValue>>
+{
+	template<typename ParseContext>
+	constexpr auto parse(ParseContext& _Ctx)
+	{
+		return _Ctx.begin();
+	}
+
+	template<typename FormatContext>
+	auto format(const Booru::Optional<TValue>& _Opt, FormatContext& _Ctx) const
+	{
+        if (_Opt.has_value())
+    		return format_to(_Ctx.out(), "{}", _Opt.value());
+		return format_to(_Ctx.out(), "<null>");
+	}
+};
+
+template<class TValue>
+std::ostream & operator<<(std::ostream & _Stream, Booru::Optional<TValue> _Value )
+{
+    return _Stream << std::format( "{}", _Value );
+}
+
 namespace Booru::Strings
 {
 
@@ -48,6 +73,20 @@ static inline String From( ByteVector const & _Data )
     return From( ByteSpan(_Data) );
 }
 
+
+
+/// @brief General template for converting types to string. Uses operator<< of the type
+/// @tparam TValue Type of value to convert.
+/// @param _Item Value to convert.
+/// @return A string representing the given value.
+template <class TValue>
+static inline String From( TValue const & _Item )
+{
+    std::stringstream ss;
+    ss << _Item;
+    return ss.str();
+}
+
 /// @brief Convert an optional value to a string.
 /// @param _Item Optional value to convert. 
 /// @return A string representation of the given optional value. 
@@ -60,18 +99,6 @@ static inline String From( Optional<TValue> & _Item )
         return From( _Item.value() );
     }
     return "<null>";
-}
-
-/// @brief General template for converting types to string. Uses operator<< of the type
-/// @tparam TValue Type of value to convert.
-/// @param _Item Value to convert.
-/// @return A string representing the given value.
-template <class TValue>
-static inline String From( TValue const & _Item )
-{
-    std::stringstream ss;
-    ss << _Item;
-    return ss.str();
 }
 
 /// @brief Join a vector of value into a string. Converts each item into a string then
@@ -103,4 +130,5 @@ static inline String Join( Vector<TValue> const& _Items, StringView const & _Sep
 {
     return Join( Span(_Items), _Sep );
 }
+
 } // namespace Booru

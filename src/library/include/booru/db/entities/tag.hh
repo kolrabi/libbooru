@@ -5,7 +5,7 @@
 namespace Booru::DB::Entities
 {
 
-struct Tag : public Entity
+struct Tag : public Entity<Tag>
 {
     static char const constexpr* Table = "Tags";
     static char const constexpr* LOGGER = "booru.db.entites.tags";

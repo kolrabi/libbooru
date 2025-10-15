@@ -90,7 +90,7 @@ class ToStringPropertyVisitor
         String Name = NameString(_Name);
         m_String += m_Indent;
         m_String += Name;
-        m_String += ToString(_Value) + "\n";
+        m_String += Strings::From(_Value) + "\n";
         return ResultCode::OK;
     }
 };

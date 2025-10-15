@@ -18,10 +18,17 @@ static constexpr String LOGGER = "booru.db.entity";
 /// Derived classes must implement an IterateProperties function that takes a visitor object
 /// and call its Property() function for each entity property. You can use the ENTITY_PROPERTY
 /// and ENTITY_PROPERTY_KEY macros.
+template<class TEntity>
 struct Entity
 {
     INTEGER Id = -1; // primary key
 };
+
+template<class TEntity>
+std::ostream & operator<<(std::ostream & _Stream, Entity<TEntity> const & _Entity )
+{
+    return _Stream << EntityToString( static_cast<TEntity const &>(_Entity) );
+}
 
 /// @brief Store properties from a statement into an entity.
 template <class TValue>
@@ -151,10 +158,10 @@ enum
 
 /// (Debug tool) Convert an entity to a printable string.
 template <class TEntity>
-static inline String EntityToString( TEntity& _Item )
+static inline String EntityToString( TEntity const & _Item )
 {
     Visitors::ToStringPropertyVisitor Visitor;
-    auto result = _Item.IterateProperties( Visitor );
+    auto result = const_cast<TEntity&>(_Item).IterateProperties( Visitor );
     return Visitor.m_String;
 }
 
