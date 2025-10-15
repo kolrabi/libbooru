@@ -51,6 +51,8 @@ char const* ResultToString( ResultCode _Code )
         return "Database Table Locked";
     case ResultCode::DatabaseRangeError:
         return "Database Range Error";
+    case ResultCode::DatabaseConstraintViolation:
+        return "Database Constraint Violation";
 
     default:
         return "Unknown Result Code";
@@ -105,6 +107,8 @@ char const* ResultToDescription( ResultCode _Code )
         return "Request could not be handled due to a locked table";
     case ResultCode::DatabaseRangeError:
         return "Database library function parameter was out of range";
+    case ResultCode::DatabaseConstraintViolation:
+        return "Statement would violate a constraint. Either a primary key already exists or a required foreign key doesn't.";
 
     default:
         return "Unknown Result Code";

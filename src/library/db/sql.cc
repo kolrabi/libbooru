@@ -3,6 +3,8 @@
 char const* g_SQLSchema = R"SQL(
     -- -----------------------------------------------------------------------------
 
+    PRAGMA foreign_keys = ON;
+
     -- table containing per database application preference variables
     DROP TABLE IF EXISTS Config;
     CREATE TABLE Config
