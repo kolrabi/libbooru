@@ -15,3 +15,7 @@ target_include_directories( booru_test PRIVATE ${BOORU_INCLUDES} )
 
 add_test( open              booru_test "test.db" "open" )
 add_test( config            booru_test "test.db" "config" )
+
+add_test( tag_create        booru_test "test.db" "tag_create" )
+add_test( tag_update        booru_test "test.db" "tag_update" )
+add_test( tag_delete        booru_test "test.db" "tag_delete" )
