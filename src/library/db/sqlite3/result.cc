@@ -19,7 +19,7 @@ ResultCode Sqlite3ToResult( int _RC )
     case SQLITE_RANGE:
         return ResultCode::DatabaseRangeError;
     case SQLITE_CONSTRAINT:
-        return ResultCode::AlreadyExists;
+        return ResultCode::DatabaseConstraintViolation;
     case SQLITE_BUSY:
         return ResultCode::DatabaseLocked;
     case SQLITE_LOCKED:

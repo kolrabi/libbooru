@@ -34,6 +34,7 @@ enum class ResultCode : int32_t
     DatabaseLocked      = -2001,
     DatabaseTableLocked = -2002,
     DatabaseRangeError  = -2003,
+    DatabaseConstraintViolation = -2004
 };
 
 [[nodiscard]] char const* ResultToString( ResultCode _Result );

@@ -13,6 +13,24 @@ namespace Booru::DB::Sqlite3
 
 static inline const String LOGGER = "booru.db.sqlite3";
 
+ExpectedOwning<DatabaseInterface> DatabaseSqlite3::OpenDatabase( StringView const & _Path )
+{
+    sqlite3* db_handle = nullptr;
+    int sqlite_result  = sqlite3_open( String( _Path ).c_str(), &db_handle );
+    
+    if ( sqlite_result == SQLITE_OK )
+    {
+        // enable foreign keys constraint enforcement
+        sqlite_result = sqlite3_exec( db_handle, "PRAGMA foreign_keys = ON;", nullptr, nullptr, nullptr );
+    }
+
+    if ( sqlite_result == SQLITE_OK )
+    {
+        return { MakeOwning<DatabaseSqlite3>( db_handle ) };
+    }
+    return Sqlite3ToResult( sqlite_result );
+}
+
 DatabaseSqlite3::DatabaseSqlite3( sqlite3* _Handle ) : m_Handle{ _Handle }
 {
     CHECK_ASSERT(m_Handle != nullptr);
