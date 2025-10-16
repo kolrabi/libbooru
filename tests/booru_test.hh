@@ -7,6 +7,14 @@
 
 #define LOGGER "booru_test"
 
+#define TEST_CHECK(cond) test_check((cond), #cond)
+#define TEST_CHECK_ERROR(cond) test_check_error((cond), #cond)
+#define TEST_CHECK_EQUAL(cond, v) { test_check((cond), #cond); test_equal((cond).Value, (v), #cond, #v); }
+
+#define TEST_EQUAL(cond, v) { test_equal((cond), (v), #cond, #v); }
+#define TEST_TRUE(cond) { test_equal(!!(cond), true, #cond); }
+#define TEST_FALSE(cond) { test_equal(!(cond), true, #cond); }
+
 static inline void PASS()
 {
     exit(EXIT_SUCCESS);
@@ -20,6 +28,17 @@ static inline void FAIL()
 static inline void test_check(Booru::ResultCode _Code, char const * _Cond)
 {
     if (Booru::ResultIsError(_Code))
+    {
+        LOG_ERROR("{} == {}\n", _Cond, Booru::ResultToString(_Code));
+        FAIL();
+    }
+    LOG_INFO("{} == {}\n", _Cond, Booru::ResultToString(_Code));
+}
+
+
+static inline void test_check_error(Booru::ResultCode _Code, char const * _Cond)
+{
+    if (!Booru::ResultIsError(_Code))
     {
         LOG_ERROR("{} == {}\n", _Cond, Booru::ResultToString(_Code));
         FAIL();

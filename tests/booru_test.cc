@@ -8,24 +8,6 @@
 
 #include "booru_test.hh"
 
-#define TEST_CHECK(cond) test_check((cond), #cond)
-
-#define TEST_CHECK_EQUAL(cond, v) { test_check((cond), #cond); test_equal((cond).Value, (v), #cond, #v); }
-#define TEST_EQUAL(cond, v) { test_equal((cond), (v), #cond, #v); }
-#define TEST_TRUE(cond) { test_equal(!!(cond), true, #cond); }
-#define TEST_FALSE(cond) { test_equal(!(cond), true, #cond); }
-
-static inline void test_check_error(Booru::ResultCode _Code, char const * _Cond)
-{
-    if (!Booru::ResultIsError(_Code))
-    {
-        LOG_ERROR("Condition is not error: {}\n", _Cond);
-        FAIL();
-    }
-    LOG_INFO("Condition is error, as expected: {}\n", _Cond);
-}
-
-#define TEST_CHECK_ERROR(cond) test_check_error((cond), #cond)
 #define TEST_CASE(name) {#name, [](Booru::Booru &booru, const Booru::StringView &_Path){
 #define TEST_END }},
 
@@ -34,6 +16,9 @@ static Booru::Vector<std::pair<Booru::String, void(*)(Booru::Booru &, const Boor
     TEST_CASE(open)
         // try to delete it first
         unlink(Booru::String(_Path).c_str());
+
+        // opening invalid pathshould result in error
+        TEST_CHECK_ERROR(booru.OpenDatabase( "///", false));
 
         // opening nonexisting database should result in error
         TEST_CHECK_ERROR(booru.OpenDatabase(_Path, false));
@@ -100,11 +85,38 @@ static Booru::Vector<std::pair<Booru::String, void(*)(Booru::Booru &, const Boor
         tag.TagTypeId = 4;
         TEST_CHECK(booru.UpdateTag(tag));
 
+        // invalid id -> error
+        tag.Id = -1;
+        TEST_CHECK_ERROR(booru.UpdateTag(tag));
+    TEST_END
+
+    TEST_CASE(tag_retrieve)
+        TEST_CHECK(booru.OpenDatabase(_Path, false));
+
+        auto result = booru.GetTag("test.tag");
+        TEST_CHECK(result);
+
+        auto tag = result.Value;
+
+        auto resultVector = booru.GetTags();
+        TEST_CHECK(resultVector);
+        TEST_EQUAL(resultVector.Value.size(), 1);
+        TEST_EQUAL(resultVector.Value[0], tag);
+
+        auto idVector = Booru::DB::Entities::CollectIds(resultVector.Value);
+        TEST_EQUAL(idVector.size(), 1);
+        TEST_EQUAL(idVector[0], tag.Id);
+
         // retrieve back by name, should have the same values
         TEST_CHECK_EQUAL(booru.GetTag("test.tag"), tag);
 
         // retrieve back by id
         TEST_CHECK_EQUAL(booru.GetTag(1), tag);
+
+        resultVector = Booru::DB::Entities::GetAllWithKey<Booru::DB::Entities::Tag>(booru.GetDatabase(), "Name", "test.tag");
+        TEST_CHECK(resultVector);
+        TEST_EQUAL(resultVector.Value.size(), 1);
+        TEST_EQUAL(resultVector.Value[0], tag);
     TEST_END
 
     TEST_CASE(tag_delete)
@@ -121,9 +133,8 @@ static Booru::Vector<std::pair<Booru::String, void(*)(Booru::Booru &, const Boor
         // deletion should remove id
         TEST_EQUAL(tag.Id, -1);
 
-        // try to delete again, should succesfully delete all tags with the given id, of which there is none.
         tag.Id = 1;
-        TEST_CHECK(booru.DeleteTag(tag));
+        TEST_CHECK_ERROR(booru.DeleteTag(tag));
     TEST_END
 };
 

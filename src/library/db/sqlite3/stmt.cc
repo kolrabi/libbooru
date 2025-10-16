@@ -178,7 +178,8 @@ ResultCode DatabasePreparedStatementSqlite3::Step( bool _NeedRow )
     ResultCode resultCode = Sqlite3ToResult( sqlite3_step( m_Handle ) );
     if ( _NeedRow && resultCode == ResultCode::DatabaseEnd )
     {
-        return ResultCode::NotFound;
+        if ( sqlite3_changes( sqlite3_db_handle( m_Handle ) ) == 0 )
+            return ResultCode::NotFound;
     }
     return resultCode;
 }

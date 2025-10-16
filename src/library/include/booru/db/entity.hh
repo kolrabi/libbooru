@@ -105,31 +105,21 @@ ExpectedVector<TEntity> GetAllWithKey( DB::DatabaseInterface& _DB, StringView co
 template <class TEntity>
 ResultCode Update( DB::DatabaseInterface& _DB, TEntity& _Entity )
 {
-    if ( _Entity.Id == -1 )
-    {
-        return ResultCode::InvalidEntityId;
-    }
-
     auto stmt = DB::Query::UpdateEntity( TEntity::Table, _Entity ).Key( "Id" ).Prepare( _DB );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Code );
     CHECK_RETURN_RESULT_ON_ERROR( StoreEntity( _Entity, *stmt.Value ) );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Value->BindValue( "Id", _Entity.Id ) );
-    return stmt.Value->Step();
+    return stmt.Value->Step(true);
 }
 
 /// @brief Delete an entity from the database. The entity must have a valid ID set. 
 template <class TEntity>
 static ResultCode Delete( DB::DatabaseInterface& _DB, TEntity& _Entity )
 {
-    if ( _Entity.Id == -1 )
-    {
-        return ResultCode::InvalidEntityId;
-    }
-
     auto stmt = DB::Query::Delete( TEntity::Table ).Key( "Id" ).Prepare( _DB );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Code );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Value->BindValue( "Id", _Entity.Id ) );
-    CHECK_RETURN_RESULT_ON_ERROR( stmt.Value->Step() );
+    CHECK_RETURN_RESULT_ON_ERROR( stmt.Value->Step(true) );
     _Entity.Id = -1;
     return ResultCode::OK;
 }

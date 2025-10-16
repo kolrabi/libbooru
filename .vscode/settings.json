@@ -84,7 +84,7 @@
         "typeindex": "cpp",
         "typeinfo": "cpp"
     },
-    "cmake.configureEnvironment": {
-        "CODE_COVERAGE": "ON"
-    }
+    "cmake.configureArgs": [
+        "-DCODE_COVERAGE=ON"
+    ]
 }
