@@ -1,6 +1,15 @@
 #include "sql.hh"
 
-char const* g_SQLSchema = R"SQL(
+namespace Booru
+{
+    int64_t SQLGetSchemaVersion()
+    {
+        return 1ll;
+    }
+
+    StringView SQLGetBaseSchema()
+    {
+        return R"SQL(
     -- -----------------------------------------------------------------------------
 
     PRAGMA foreign_keys = ON;
@@ -180,10 +189,18 @@ char const* g_SQLSchema = R"SQL(
     );
 
 
-)SQL";
+        )SQL"sv;
+    }
 
-char const* SQLGetUpdateSchema( int64_t _Version )
-{
-    //
-    return "";
+    StringView SQLGetUpdateSchema( int64_t _Version )
+    {
+        switch( _Version )
+        {
+            case 0: return R"SQL(
+                UPDATE CONFIG SET Value = 1 WHERE Name == "db.version";
+            )SQL"sv;
+        }
+        return ""sv;
+    }
+
 }

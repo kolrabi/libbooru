@@ -12,6 +12,7 @@ class Booru
 {
   public:
     static Owning<Booru> InitializeLibrary();
+    static int64_t GetSchemaVersion();
 
     ~Booru();
 

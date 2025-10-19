@@ -30,6 +30,11 @@ Owning<Booru> Booru::InitializeLibrary()
     return Owning<Booru>( new Booru ); 
 }
 
+int64_t Booru::GetSchemaVersion()
+{
+    return SQLGetSchemaVersion();
+}
+
 Booru::Booru()
 {
     log4cxx::BasicConfigurator::resetConfiguration();
@@ -79,7 +84,7 @@ ResultCode Booru::OpenDatabase( StringView const & _Path, bool _Create )
 
     LOG_INFO( "Sucessfully opened database. Version {}", dbVersion.Value );
 
-    for ( DB::INTEGER i = dbVersion.Value; i < k_SQLSchemaVersion; i++ )
+    for ( DB::INTEGER i = dbVersion.Value; i < SQLGetSchemaVersion(); i++ )
     {
         LOG_INFO( "Upgrading database schema to version {}...", i );
         CHECK_RETURN_RESULT_ON_ERROR( UpdateTables( i ) );
@@ -136,7 +141,7 @@ Expected<DB::INTEGER> Booru::GetConfigInt64( DB::TEXT const& _Key )
 ResultCode Booru::CreateTables()
 {
     LOG_INFO( "Creating database tables..." );
-    return this->m_DB->ExecuteSQL( g_SQLSchema );
+    return this->m_DB->ExecuteSQL( SQLGetBaseSchema() );
 }
 
 ResultCode Booru::UpdateTables( int64_t _Version )

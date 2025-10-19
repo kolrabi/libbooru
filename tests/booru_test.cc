@@ -35,8 +35,10 @@ static Booru::Vector<std::pair<Booru::String, void(*)(Booru::Booru &, const Boor
     TEST_CASE(config)
         TEST_CHECK(booru.OpenDatabase(_Path, false));
 
-        TEST_CHECK_EQUAL(booru.GetConfig("db.version"), "0"); // TODO: get current version from library
-        TEST_CHECK_EQUAL(booru.GetConfigInt64("db.version"), 0); // TODO: get current version from library
+        int64_t schemaVersion = Booru::Booru::GetSchemaVersion();
+
+        TEST_CHECK_EQUAL(booru.GetConfig("db.version"), Booru::Strings::From(schemaVersion));
+        TEST_CHECK_EQUAL(booru.GetConfigInt64("db.version"), schemaVersion);
 
         TEST_CHECK(booru.SetConfig("test.key", "test.value"));
         TEST_CHECK_EQUAL(booru.GetConfig("test.key"), "test.value");
