@@ -13,7 +13,7 @@ class DatabaseSqlite3 : public DB::DatabaseInterface
   public:
     static ExpectedOwning<DatabaseInterface> OpenDatabase( StringView const & _Path );
 
-    DatabaseSqlite3( sqlite3* _Handle );
+    explicit DatabaseSqlite3( sqlite3* _Handle );
     virtual ~DatabaseSqlite3();
 
     virtual ExpectedOwning<DatabasePreparedStatementInterface>

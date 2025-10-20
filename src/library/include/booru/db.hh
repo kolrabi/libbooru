@@ -44,7 +44,7 @@ class TransactionGuard
   public:
 
     /// @brief C'tor, enter transaction
-    TransactionGuard( DatabaseInterface& _DB )
+    explicit TransactionGuard( DatabaseInterface& _DB )
         : DB{ _DB }, IsCommited{ false }, IsValid{ false }
     {
         LOG_DEBUG("Transaction Guard {}: BEGIN", static_cast<void*>(this));
@@ -56,7 +56,7 @@ class TransactionGuard
         if ( !this->IsCommited && IsValid )
         {
             LOG_DEBUG("Transaction Guard {}: ROLLBACK", static_cast<void*>(this));
-            auto result = this->DB.RollbackTransaction();
+            CHECK( this->DB.RollbackTransaction() );
         }
     }
 
@@ -65,7 +65,7 @@ class TransactionGuard
         if ( !IsCommited && IsValid )
         {
             LOG_DEBUG("Transaction Guard {}: COMMIT", static_cast<void*>(this));
-            auto result      = this->DB.CommitTransaction();
+            CHECK( this->DB.CommitTransaction() );
             this->IsCommited = true;
         }
     }

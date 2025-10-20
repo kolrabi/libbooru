@@ -10,7 +10,7 @@ namespace Booru::DB::Visitors
 class StatementPropertyVisitor
 {
 public:
-    StatementPropertyVisitor( DB::DatabasePreparedStatementInterface& _Stmt ) : Stmt{ _Stmt } {}
+    explicit StatementPropertyVisitor( DB::DatabasePreparedStatementInterface& _Stmt ) : Stmt{ _Stmt } {}
 
 protected:
     DB::DatabasePreparedStatementInterface& Stmt;
@@ -48,7 +48,7 @@ template <class TQuery>
 class QueryNonPrimaryKeyColumnVisitor final
 {
   public:
-    QueryNonPrimaryKeyColumnVisitor( TQuery& _Query ) : Query { _Query } { }
+    explicit QueryNonPrimaryKeyColumnVisitor( TQuery& _Query ) : Query { _Query } { }
 
     template <class TValue>
     ResultCode Property( StringView const & _Name, TValue& _Value, bool _IsPrimaryKey = false )
@@ -68,7 +68,7 @@ class QueryNonPrimaryKeyColumnVisitor final
 class ToStringPropertyVisitor
 {
   public:
-    ToStringPropertyVisitor( StringView const & _Indent = "    " ) : m_Indent { _Indent } {}
+    explicit ToStringPropertyVisitor( StringView const & _Indent = "    " ) : m_Indent { _Indent } {}
 
     String m_String;
     String m_Indent;

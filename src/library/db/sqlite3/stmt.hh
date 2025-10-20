@@ -10,8 +10,8 @@ namespace Booru::DB::Sqlite3
 class DatabasePreparedStatementSqlite3 : public DatabasePreparedStatementInterface
 {
   public:
-    DatabasePreparedStatementSqlite3( sqlite3_stmt* _Handle );
-    virtual ~DatabasePreparedStatementSqlite3();
+    explicit DatabasePreparedStatementSqlite3( sqlite3_stmt* _Handle );
+    virtual ~DatabasePreparedStatementSqlite3() override;
 
     ResultCode BindValue( StringView const & _Name,  ByteSpan const& _Blob ) override;
     // ResultCode BindValue( StringView const & _Name, void const* _Blob, size_t _Size ) override;
