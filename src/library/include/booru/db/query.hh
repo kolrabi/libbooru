@@ -75,22 +75,8 @@ class Query
     String GetWhereString()
     {
         if ( WhereArgs.empty() )
-        {
             return "";
-        }
-
-        String whereString = "WHERE ";
-        bool first              = true;
-        // TODO: whereString += Strings::Join( WhereArgs, " AND ");
-        for ( auto const& clause : WhereArgs )
-        {
-            if ( !first )
-            {
-                whereString += "AND ";
-            }
-            whereString += clause->ToString();
-        }
-        return whereString;
+        return " WHERE "s + Strings::JoinXForm( WhereArgs, " AND ", [](auto const& v){ return v->ToString(); } );
     }
 };
 
@@ -98,33 +84,17 @@ class Query
 class Select : public Query<Select>
 {
   public:
-    Select( StringView const & _Table ) : Query{ _Table } {}
+    explicit Select( StringView const & _Table ) : Query{ _Table } {}
 
     String ToString() override
     {
         String sqlString = "SELECT ";
-        if ( Columns.empty() )
-        {
-            sqlString += "* \n";
-        }
-        else
-        {
-            bool first = true;
-            for ( auto const& col : Columns )
-            {
-                if ( !first )
-                {
-                    sqlString += ", ";
-                }
-                sqlString += col;
-                first = false;
-            }
-            sqlString += "\n";
-        }
-        if ( Table != "" )
-        {
-            sqlString += "FROM " + Table + "\n";
-        }
+
+        if ( Columns.empty() )  sqlString += "*";
+        else                    sqlString += Strings::Join( Columns, ", " );
+
+        if ( Table != "" )      sqlString += " FROM " + Table;
+        
         sqlString += GetWhereString();
         return sqlString;
     }
@@ -134,7 +104,7 @@ class Select : public Query<Select>
 class Insert : public Query<Insert>
 {
   public:
-    Insert( StringView const & _Table ) : Query{ _Table } {}
+    explicit Insert( StringView const & _Table ) : Query{ _Table } {}
 
     String ToString() override
     {
@@ -145,28 +115,12 @@ class Insert : public Query<Insert>
     String Values()
     {
         String sqlString = "\n(";
-
-        bool first = true;
-        for ( auto const& col : Columns )
-        {
-            if ( !first )
-            {
-                sqlString += ", ";
-            }
-            sqlString += col;
-            first = false;
-        }
+        sqlString += Strings::Join( Columns, ", " );
         sqlString += ")\nVALUES(";
-        first = true;
-        for ( auto const& col : Columns )
+        if ( !Columns.empty() )
         {
-            if ( !first )
-            {
-                sqlString += ", ";
-            }
             sqlString += "$";
-            sqlString += col;
-            first = false;
+            sqlString += Strings::Join( Columns, ", $" );
         }
         sqlString += ")\n";
         return sqlString;
@@ -178,7 +132,7 @@ class Insert : public Query<Insert>
 class Upsert : public Insert
 {
   public:
-    Upsert( StringView const & _Table ) : Insert{ _Table } {}
+    explicit Upsert( StringView const & _Table ) : Insert{ _Table } {}
 
     String ToString() override
     {
@@ -190,7 +144,7 @@ class Upsert : public Insert
 class Update : public Query<Update>
 {
   public:
-    Update( StringView const & _Table ) : Query{ _Table } {}
+    explicit Update( StringView const & _Table ) : Query{ _Table } {}
 
     String ToString() override
     {
@@ -215,7 +169,7 @@ class Update : public Query<Update>
 class Delete : public Query<Delete>
 {
   public:
-    Delete( StringView const & _Table ) : Query{ _Table } {}
+    explicit Delete( StringView const & _Table ) : Query{ _Table } {}
 
     String ToString() override
     {

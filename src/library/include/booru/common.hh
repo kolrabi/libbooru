@@ -7,5 +7,6 @@
 #include <cstring>
 
 #include <format>
+#include <algorithm>
 
 #include <booru/result.hh>

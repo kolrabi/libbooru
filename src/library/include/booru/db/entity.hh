@@ -51,10 +51,8 @@ template <class TEntity>
 Vector<DB::INTEGER> CollectIds( Vector<TEntity> const& _Entities )
 {
     Vector<DB::INTEGER> Ids;
-    for ( auto const& entity : _Entities )
-    {
-        Ids.push_back( entity.Id );
-    }
+    Ids.resize(_Entities.size());
+    std::transform(std::begin(_Entities), std::end(_Entities), std::begin(Ids), [](auto &e){ return e.Id; });
     return Ids;
 }
 

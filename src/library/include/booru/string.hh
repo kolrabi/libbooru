@@ -101,34 +101,31 @@ static inline String From( Optional<TValue> & _Item )
     return "<null>";
 }
 
+template <class TValue>
+struct XFormFrom
+{
+    String operator() (TValue const & _In) const { return From(_In); }
+};
+
+template<>
+struct XFormFrom<String>
+{
+    String operator() (String const & _In) const { return _In; }
+};
+
 /// @brief Join a vector of value into a string. Converts each item into a string then
 /// joins them together using the separator _Sep.
 /// @param _Items Values to join together.
 /// @param _Sep Separator between items.
 /// @return A string containing all string representations of the given values separated by _Sep.
 /// @see Join(StringVector)
-template <class TValue>
-static inline String Join( Span<TValue> const& _Items, StringView const & _Sep = ", " )
+template <class TContainer, typename FOp = XFormFrom<typename TContainer::value_type>>
+static inline String JoinXForm( TContainer const& _Items, StringView const & _Sep = ", ",  FOp _Op = XFormFrom<typename TContainer::value_type>{} )
 {
     StringVector strings;
-    strings.reserve(_Items.size());
-    for ( auto const& item : _Items )
-    {
-        strings.push_back( From( item ) );
-    }
+    strings.resize( _Items.size() );
+    std::transform( std::begin( _Items ), std::end( _Items ), std::begin( strings ), _Op );
     return Join( strings, _Sep );
 }
 
-template <class TValue, size_t N>
-static inline String Join( Array<TValue, N> const& _Items, StringView const & _Sep = ", " )
-{
-    return Join( Span(_Items), _Sep );
-}
-
-template <class TValue>
-static inline String Join( Vector<TValue> const& _Items, StringView const & _Sep = ", " )
-{
-    return Join( Span(_Items), _Sep );
-}
-
-} // namespace Booru
+} // namespace Booru::Strings
