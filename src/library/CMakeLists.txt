@@ -1,11 +1,11 @@
 find_package(SQLite3 REQUIRED)
 find_package(log4cxx REQUIRED)
 
-add_library(BooruLib)
-add_library(Booru::Booru ALIAS BooruLib)
+add_library(booru)
+add_library(Booru::Booru ALIAS booru)
 
 target_sources(
-    BooruLib
+    booru
 
     PRIVATE
         library.cc
@@ -53,7 +53,7 @@ target_sources(
 )
 
 set_target_properties( 
-    BooruLib 
+    booru 
     PROPERTIES 
         CXX_STANDARD 20
         VERSION ${PROJECT_VERSION} 
@@ -61,7 +61,7 @@ set_target_properties(
 )
 
 target_link_libraries( 
-    BooruLib
+    booru
     LINK_PUBLIC 
         SQLite::SQLite3 
         log4cxx 
@@ -77,7 +77,7 @@ write_basic_package_version_file(
 
 install(
     TARGETS 
-        BooruLib
+        booru
     EXPORT 
         BooruTargets
     FILE_SET 

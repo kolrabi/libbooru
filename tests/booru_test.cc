@@ -1,4 +1,3 @@
-
 #include <booru/booru.hh>
 #include <booru/db/entities/tag.hh>
 
@@ -140,6 +139,42 @@ static Booru::Vector<std::pair<Booru::String, void(*)(Booru::Booru &, const Boor
     TEST_END
 };
 
+static bool runTests( Booru::StringView dbName, Booru::StringView testName )
+{
+    // we need a booru library to check
+    auto booru = Booru::Booru::InitializeLibrary();
+    if (!booru) 
+        FAIL();
+
+    // here you can set the log level to debug for more information about failed tests
+    // log4cxx::Logger::getRootLogger()->setLevel(log4cxx::Level::getDebug());
+
+    LOG_INFO("Starting tests for database: {} and test: {}", dbName, testName);
+    LOG_INFO("Current directory: {}", get_current_dir_name());
+
+    // find test and run it, or run all tests (for coverage), or fail
+    bool testAll = (testName == "all");
+    size_t testCount = 0;
+
+    LOG_INFO("Running tests...");
+    for (auto & [name, func] : test_cases)
+    {
+        if (testAll || name == testName )
+        {
+            LOG_INFO("Running test: {}", name);
+            func(*booru, dbName);
+            testCount ++;
+        }
+    }
+
+    if (testCount == 0)
+    {
+        LOG_ERROR("Unknown test {}\n", testName);
+        return false;
+    }
+
+    return true;
+}
 // syntax: booru_test <db> <test>
 int main(int argc, char *argv[]) {
     // initialize logging in case we have to speak before booru initializes it
@@ -151,50 +186,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    // we need a booru library to check
-    auto booru = Booru::Booru::InitializeLibrary();
-    if (!booru) 
-        FAIL();
-
-    // here you can set the log level to debug for more information about failed tests
-    // log4cxx::Logger::getRootLogger()->setLevel(log4cxx::Level::getDebug());
-
-    Booru::String dbName = argv[1];
-    Booru::String testName = argv[2];
-
-    LOG_INFO("Starting tests for database: {} and test: {}", dbName, testName);
-    LOG_INFO("Current directory: {}", get_current_dir_name());
-
-    // find test and run it, or run all tests (for coverage), or fail
-    if (testName == "all")
-    {
-        LOG_INFO("Running all tests...");
-        for (const auto& testCase : test_cases)
-        {
-            LOG_INFO("Running test: {}", testCase.first);
-            testCase.second(*booru, dbName);
-        }
-    }
-    else
-    {
-        auto it = test_cases.begin();
-        while(it != test_cases.end())
-        {
-            if ( it->first == testName )
-            {
-                LOG_INFO("Running test: {}", it->first);
-                it->second(*booru, dbName);
-                break;
-            }
-            it++;
-        }
-        if (it == test_cases.end())
-        {
-            LOG_ERROR("Unknown test {}\n", testName);
-            booru.reset();
-            FAIL();
-        }
-    }
-    booru.reset();
-    PASS();
+    if ( runTests( argv[1], argv[2] ) )
+        PASS();
+    FAIL();
 }

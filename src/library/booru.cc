@@ -133,7 +133,7 @@ Expected<DB::INTEGER> Booru::GetConfigInt64( DB::TEXT const& _Key )
     if ( config )
     {
         // TODO: error handling
-        return ::atol( config.Value.c_str() );
+        return std::stoll( config );
     }
     return config.Code;
 }
@@ -284,10 +284,10 @@ ResultCode Booru::AddTagToPost( DB::INTEGER _PostId, StringView const & _Tag )
         DB::INTEGER impliedTagId = implication.ImpliedTagId;
         if ( implication.Flags & DB::Entities::TagImplication::FLAG_REMOVE_TAG )
         {
-            DB::Entities::PostTag postTag;
-            postTag.PostId = _PostId;
-            postTag.TagId  = tag.Value.Id;
-            CHECK_RETURN_RESULT_ON_ERROR( DeletePostTag( postTag ) );
+            DB::Entities::PostTag newPostTag;
+            newPostTag.PostId = _PostId;
+            newPostTag.TagId  = tag.Value.Id;
+            CHECK_RETURN_RESULT_ON_ERROR( DeletePostTag( newPostTag ) );
         }
         else
         {
@@ -633,7 +633,7 @@ Expected<String> Booru::GetSQLConditionForTag( String _Tag )
            "       FROM    PostTags "
            "       WHERE   PostTags.PostId =   Posts.Id "
            "       AND     PostTags.TagId  IN  (" +
-           Strings::Join( CollectIds( tags.Value ) ) +
+           Strings::JoinXForm( CollectIds( tags.Value ), ", " ) +
            ") "
            "   ) > 0 "
            ") ";
