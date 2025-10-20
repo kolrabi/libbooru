@@ -6,6 +6,9 @@ char const* ResultToString( ResultCode _Code )
 {
     switch ( _Code )
     {
+    case ResultCode::Undefined:
+        return "Undefined Error";
+
     case ResultCode::OK:
         return "OK";
     case ResultCode::CreatedOK:
@@ -63,6 +66,9 @@ char const* ResultToDescription( ResultCode _Code )
 {
     switch ( _Code )
     {
+    case ResultCode::Undefined:
+        return "No result code was specified";
+
     case ResultCode::OK:
         return "The requested operation completed successfully";
     case ResultCode::CreatedOK:

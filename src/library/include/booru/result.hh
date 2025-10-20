@@ -3,13 +3,13 @@
 #include <booru/common.hh>
 #include <booru/log.hh>
 
-#include <vector>
-
 namespace Booru
 {
 
 enum class ResultCode : int32_t
 {
+    Undefined = std::numeric_limits<int32_t>::min(),
+
     OK          = 0,
     CreatedOK   = 1,
     DatabaseRow = 2,
@@ -53,9 +53,11 @@ struct [[nodiscard]] Expected
     ResultCode Code;
     TValue Value;
 
+    Expected() : Code { ResultCode::Undefined }, Value {} {}
+
     /// @brief C'tor that sets the result code and sets the value to default.
     /// @param _Code Code to set, by default OK.
-    Expected( ResultCode _Code = ResultCode::OK ) : Code{ _Code }, Value{} {}
+    Expected( ResultCode _Code ) : Code{ _Code }, Value{} {}
 
     /// @brief Successful value constructor. Result code and value will be moved.
     /// @param _Value Value to set.
