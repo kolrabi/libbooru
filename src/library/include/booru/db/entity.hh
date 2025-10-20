@@ -22,6 +22,35 @@ template<class TEntity>
 struct Entity
 {
     INTEGER Id = -1; // primary key
+
+    ResultCode CheckValidForCreate() const
+    {
+        // cant't insert with id
+        if ( Id != -1 ) 
+            return ResultCode::InvalidArgument;
+        return ResultCode::OK;
+    }
+
+    ResultCode CheckValidForDelete() const
+    {
+        // need valid id
+        if ( Id == -1 ) 
+            return ResultCode::InvalidArgument;
+        return ResultCode::OK;
+    }
+
+    ResultCode CheckValidForUpdate() const
+    {
+        // need valid id
+        if ( Id == -1 ) 
+            return ResultCode::InvalidArgument;
+        return ResultCode::OK;
+    }
+
+    ResultCode CheckValues() const
+    {
+        return ResultCode::OK;
+    }
 };
 
 template<class TEntity>
@@ -60,8 +89,8 @@ Vector<DB::INTEGER> CollectIds( Vector<TEntity> const& _Entities )
 template <class TEntity>
 ResultCode Create( DB::DatabaseInterface& _DB, TEntity& _Entity )
 {
-    auto stmt = DB::Query::InsertEntity<TEntity>( TEntity::Table, _Entity ).Prepare( _DB );
-    CHECK_RETURN_RESULT_ON_ERROR( stmt.Code );
+    CHECK_RETURN_RESULT_ON_ERROR( _Entity.CheckValidForCreate() );
+    CHECK_VAR_RETURN_RESULT_ON_ERROR( stmt, DB::Query::InsertEntity<TEntity>( TEntity::Table, _Entity ).Prepare( _DB ) );
     CHECK_RETURN_RESULT_ON_ERROR( StoreEntity( _Entity, *stmt.Value ) );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Value->Step() );
     return _DB.GetLastRowId( _Entity.Id );

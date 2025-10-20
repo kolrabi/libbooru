@@ -26,6 +26,7 @@ enum class ResultCode : int32_t
     ValueIsNull      = -9,
     ConditionFailed  = -10,
     RecursionExceeded = -11,
+    InvalidState     = -12,
 
     InvalidRequest = -1000,
     Unauthorized   = -1001,
@@ -128,6 +129,9 @@ static inline bool CheckResult( String const & _LoggerName, TValue const & _Resu
 #define CHECK( x, ... )\
     { auto const & _result = (x); CheckResult(LOGGER, _result, #x, __func__ __VA_OPT__(,) __VA_ARGS__); }
 
+#define CHECK_RETURN( x, ... )\
+    { auto const & _result = (x); CheckResult(LOGGER, _result, #x, __func__ __VA_OPT__(,) __VA_ARGS__); return _result; }
+
 // Check x. On error: log error with var args, return error code.
 #define CHECK_RETURN_RESULT_ON_ERROR( x, ... )\
     { auto const & _result = (x); if (CheckResult(LOGGER, _result, #x, __func__ __VA_OPT__(,) __VA_ARGS__)) return (ResultCode)_result; }
@@ -143,5 +147,8 @@ static inline bool CheckResult( String const & _LoggerName, TValue const & _Resu
 // Assert that x is true, logs failure.
 #define CHECK_ASSERT( x )\
     { LOG4CXX_ASSERT_FMT( log4cxx::Logger::getLogger(LOGGER), x, "Assertion failed: {}", #x); }
+
+#define CHECK_VAR_RETURN_RESULT_ON_ERROR( name, init ) \
+    auto name = (init); CHECK_RETURN_RESULT_ON_ERROR(name)
 
 }

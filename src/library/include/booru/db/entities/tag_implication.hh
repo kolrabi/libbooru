@@ -28,6 +28,13 @@ struct TagImplication : public Entity<TagImplication>
         ENTITY_PROPERTY( Flags );
         return ResultCode::OK;
     }
+
+    ResultCode CheckValues() const
+    {
+        if ( ImpliedTagId == TagId ) return ResultCode::InvalidArgument;
+        return Entity::CheckValues();
+    }
+
 };
 
 } // namespace Booru::DB::Entities

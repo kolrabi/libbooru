@@ -56,11 +56,11 @@ static Booru::Vector<std::pair<Booru::String, void(*)(Booru::Booru &, const Boor
 
         // should not exist -> error
         tag.TagTypeId = 999;
-        TEST_CHECK_ERROR(booru.CreateTag(tag));
+        TEST_CHECK_ERROR(booru.Create(tag));
 
         // should exist (character) -> success
         tag.TagTypeId = 3;
-        TEST_CHECK(booru.CreateTag(tag));
+        TEST_CHECK(booru.Create(tag));
         TEST_EQUAL(tag.Id, 1);
 
         // retrieve back from database, should have the same values
@@ -80,19 +80,22 @@ static Booru::Vector<std::pair<Booru::String, void(*)(Booru::Booru &, const Boor
  
         // should not exist -> error
         tag.TagTypeId = 999;
-        TEST_CHECK_ERROR(booru.UpdateTag(tag));
+        TEST_CHECK_ERROR(booru.Update(tag));
 
         // should exist (character) -> success
         tag.TagTypeId = 4;
-        TEST_CHECK(booru.UpdateTag(tag));
+        TEST_CHECK(booru.Update(tag));
 
         // invalid id -> error
         tag.Id = -1;
-        TEST_CHECK_ERROR(booru.UpdateTag(tag));
+        TEST_CHECK_ERROR(booru.Update(tag));
     TEST_END
 
     TEST_CASE(tag_retrieve)
         TEST_CHECK(booru.OpenDatabase(_Path, false));
+
+        auto db = booru.GetDatabase();
+        TEST_CHECK(db);
 
         auto result = booru.GetTag("test.tag");
         TEST_CHECK(result);
@@ -114,7 +117,7 @@ static Booru::Vector<std::pair<Booru::String, void(*)(Booru::Booru &, const Boor
         // retrieve back by id
         TEST_CHECK_EQUAL(booru.GetTag(1), tag);
 
-        resultVector = Booru::DB::Entities::GetAllWithKey<Booru::DB::Entities::Tag>(booru.GetDatabase(), "Name", "test.tag");
+        resultVector = Booru::DB::Entities::GetAllWithKey<Booru::DB::Entities::Tag>(*db, "Name", "test.tag");
         TEST_CHECK(resultVector);
         TEST_EQUAL(resultVector.Value.size(), 1);
         TEST_EQUAL(resultVector.Value[0], tag);
@@ -129,13 +132,13 @@ static Booru::Vector<std::pair<Booru::String, void(*)(Booru::Booru &, const Boor
 
         // try to delete
         auto tag = result.Value;
-        TEST_CHECK(booru.DeleteTag(tag));
+        TEST_CHECK(booru.Delete(tag));
 
         // deletion should remove id
         TEST_EQUAL(tag.Id, -1);
 
         tag.Id = 1;
-        TEST_CHECK_ERROR(booru.DeleteTag(tag));
+        TEST_CHECK_ERROR(booru.Delete(tag));
     TEST_END
 };
 

@@ -40,6 +40,8 @@ char const* ResultToString( ResultCode _Code )
         return "Condition Failed";
     case ResultCode::RecursionExceeded:
         return "Recursion Exceeded";
+    case ResultCode::InvalidState:
+        return "Invalid State";
 
     case ResultCode::InvalidRequest:
         return "Invalid Request";
@@ -94,6 +96,10 @@ char const* ResultToDescription( ResultCode _Code )
         return "A provided argument was longer than expected";
     case ResultCode::ArgumentTooShort:
         return "A provided argument was shorter than expected";
+
+    case ResultCode::InvalidState:
+        return "An object was in a state that could not handle the request";
+
     case ResultCode::InvalidRequest:
         return "Request could not be understood";
     case ResultCode::Unauthorized:

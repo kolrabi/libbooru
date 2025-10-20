@@ -73,8 +73,6 @@ static inline String From( ByteVector const & _Data )
     return From( ByteSpan(_Data) );
 }
 
-
-
 /// @brief General template for converting types to string. Uses operator<< of the type
 /// @tparam TValue Type of value to convert.
 /// @param _Item Value to convert.
@@ -101,12 +99,14 @@ static inline String From( Optional<TValue> & _Item )
     return "<null>";
 }
 
+/// @brief Operator for std::transform to create a String from a value.
 template <class TValue>
 struct XFormFrom
 {
     String operator() (TValue const & _In) const { return From(_In); }
 };
 
+/// @brief Specialization of std::transform operator for things that already are Strings.
 template<>
 struct XFormFrom<String>
 {
@@ -124,8 +124,11 @@ static inline String JoinXForm( TContainer const& _Items, StringView const & _Se
 {
     StringVector strings;
     strings.resize( _Items.size() );
-    std::transform( std::begin( _Items ), std::end( _Items ), std::begin( strings ), _Op );
+    std::ranges::transform( _Items, std::begin( strings ), _Op );
     return Join( strings, _Sep );
 }
+
+/// @brief Get a String that has all characters converted to lower case.
+String ToLower( StringView const & _Str );
 
 } // namespace Booru::Strings
