@@ -110,4 +110,12 @@ Expected<ByteVector> ParseHex( StringView const & _Hex )
     return result;
 }
 
+String ToLower( StringView const & _Str )
+{
+    String lower;
+    lower.resize(_Str.size());
+    std::ranges::transform( _Str, std::begin(lower), []( char c ) { return std::tolower( c ); } );
+    return lower;
+}
+
 } 

@@ -70,6 +70,16 @@ class TransactionGuard
         }
     }
 
+    void Rollback()
+    {
+        if ( !this->IsCommited && IsValid )
+        {
+            LOG_DEBUG("Transaction Guard {}: ROLLBACK", static_cast<void*>(this));
+            CHECK( this->DB.RollbackTransaction() );
+            this->IsCommited = true;
+        }
+    }
+
     bool GetIsValid() const { return IsValid; }
 
   private:
