@@ -64,7 +64,7 @@ ResultCode Booru::OpenDatabase( StringView const & _Path, bool _Create )
 
     m_DB = std::move( db.Value );
 
-    DB::TransactionGuard guard(*m_DB);
+    DB::TransactionGuard guard(m_DB.get());
 
     LOG_INFO( "Checking database version..." );
     auto dbVersion = GetConfigInt64( "db.version" );
@@ -77,10 +77,9 @@ ResultCode Booru::OpenDatabase( StringView const & _Path, bool _Create )
             return ResultCode::InvalidArgument;
         }
         
-        CHECK_RETURN_RESULT_ON_ERROR( CreateTables(), "Table creationg failed." );
+        CHECK_RETURN_RESULT_ON_ERROR( CreateTables(), "Table creation failed." );
         dbVersion = GetConfigInt64( "db.version" );
-        CHECK_RETURN_RESULT_ON_ERROR( dbVersion.Code,
-                                      "Missing database version even after table creation." );
+        CHECK_RETURN_RESULT_ON_ERROR( dbVersion.Code, "Missing database version even after table creation." );
     }
 
     LOG_INFO( "Sucessfully opened database. Version {}", dbVersion.Value );
@@ -107,14 +106,14 @@ void Booru::CloseDatabase()
 Expected<DB::DatabaseInterface*> Booru::GetDatabase() 
 { 
     if (m_DB)
-        return this->m_DB.get(); 
-    return ResultCode::InvalidState;
+        return m_DB.get(); 
+    return { ResultCode::InvalidState };
 }
 
 Expected<DB::TEXT> Booru::GetConfig( DB::TEXT const& _Name )
 {
     CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( stmt, DB::Query::Select( "Config" ).Column( "Value" ).Key( "Name" ).Prepare( *db ) );
+    CHECK_VAR_RETURN_RESULT_ON_ERROR( stmt, DB::Query::Select( "Config" ).Column( "Value" ).Key( "Name" ).Prepare( db.Value ) );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Value->BindValue( "Name", _Name ) );
     return stmt.Value->ExecuteScalar<DB::TEXT>();
 }
@@ -122,7 +121,7 @@ Expected<DB::TEXT> Booru::GetConfig( DB::TEXT const& _Name )
 ResultCode Booru::SetConfig( DB::TEXT const & _Name, DB::TEXT const & _Value )
 {
     CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( stmt, DB::Query::Upsert( "Config" ).Column( "Value" ).Column( "Name" ).Prepare( *db ) );
+    CHECK_VAR_RETURN_RESULT_ON_ERROR( stmt, DB::Query::Upsert( "Config" ).Column( "Value" ).Column( "Name" ).Prepare( db.Value ) );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Value->BindValue( "Name", _Name ) );
     CHECK_RETURN_RESULT_ON_ERROR( stmt.Value->BindValue( "Value", _Value ) );
     CHECK_RETURN( stmt.Value->Step(false) );
@@ -142,19 +141,19 @@ Expected<DB::INTEGER> Booru::GetConfigInt64( DB::TEXT const& _Name )
 ExpectedVector<DB::Entities::PostType> Booru::GetPostTypes()
 {
     CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    return DB::Entities::GetAll<DB::Entities::PostType>( *db );
+    return DB::Entities::GetAll<DB::Entities::PostType>( db.Value );
 }
 
 Expected<DB::Entities::PostType> Booru::GetPostType( DB::INTEGER _Id )
 {
     CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    return DB::Entities::GetWithKey<DB::Entities::PostType>( *db, "Id", _Id );
+    return DB::Entities::GetWithKey<DB::Entities::PostType>( db.Value, "Id", _Id );
 }
 
 Expected<DB::Entities::PostType> Booru::GetPostType( DB::TEXT const & _Name )
 {
     CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    return DB::Entities::GetWithKey<DB::Entities::PostType>( *db, "Name", _Name );
+    return DB::Entities::GetWithKey<DB::Entities::PostType>( db.Value, "Name", _Name );
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////
@@ -163,20 +162,23 @@ Expected<DB::Entities::PostType> Booru::GetPostType( DB::TEXT const & _Name )
 
 ExpectedVector<DB::Entities::Post> Booru::GetPosts()
 {
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    return DB::Entities::GetAll<DB::Entities::Post>( *db );
+    return 
+        GetDatabase()
+        .Then( DB::Entities::GetAll<DB::Entities::Post> );
 }
 
 Expected<DB::Entities::Post> Booru::GetPost( DB::INTEGER _Id )
 {
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    return DB::Entities::GetWithKey<DB::Entities::Post>( *db, "Id", _Id );
+    return 
+        GetDatabase()
+        .Then( [&]( auto db ){ return DB::Entities::GetWithKey<DB::Entities::Post>( db, "Id", _Id ); } );
 }
 
 Expected<DB::Entities::Post> Booru::GetPost( DB::BLOB<16> _MD5 )
 {
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    return DB::Entities::GetWithKey<DB::Entities::Post>( *db, "MD5Sum", _MD5 );
+    return 
+        GetDatabase()
+        .Then( [&]( auto db ){ return DB::Entities::GetWithKey<DB::Entities::Post>( db, "MD5Sum", _MD5 ); } );
 }
 
 ResultCode Booru::AddTagToPost( DB::INTEGER _PostId, StringView const & _Tag )
@@ -208,7 +210,7 @@ ResultCode Booru::AddTagToPost( DB::INTEGER _PostId, StringView const & _Tag )
     }
 
     CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    DB::TransactionGuard transactionGuard( *db );
+    DB::TransactionGuard transactionGuard( db.Value );
 
     // actually add tag
     DB::Entities::PostTag postTag;
@@ -244,35 +246,27 @@ ResultCode Booru::AddTagToPost( DB::INTEGER _PostId, StringView const & _Tag )
 
 ResultCode Booru::RemoveTagFromPost( DB::INTEGER _PostId, DB::INTEGER _TagId )
 {
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( postTag, FindPostTag( _PostId, _TagId ) );
-    return Delete( postTag.Value );
+    return 
+        FindPostTag( _PostId, _TagId)
+        .Then( [this](auto pt){ return Delete(pt); } );
 }
 
 ExpectedVector<DB::Entities::Post> Booru::FindPosts( StringView const & _QueryString )
 {
     StringVector queryStringTokens = Strings::Split( _QueryString );
     if ( queryStringTokens.empty() )
-    {
         return ResultCode::InvalidRequest;
-    }
 
-    String SQL = R"SQL(
-        SELECT  *
-        FROM    Posts
-        WHERE
-    )SQL";
+    auto query = 
+        DB::Query::Select(DB::Entities::Post::Table);
 
-    StringVector conditionStrings;
     for ( auto const& tag : queryStringTokens )
-    {
-        conditionStrings.push_back( GetSQLConditionForTag( tag ) );
-    }
+        query.Where( GetSQLConditionForTag( tag ) );
 
-    SQL += Strings::Join( conditionStrings, " AND \n" );
-
-    auto stmt = m_DB->PrepareStatement( SQL );
-    CHECK_RETURN_RESULT_ON_ERROR( stmt.Code );
-    return stmt.Value->ExecuteList<DB::Entities::Post>();
+    return
+        query
+        .Prepare( m_DB.get() )
+        .Then( [this](auto s ){ return s->template ExecuteList<DB::Entities::Post>(); } );
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////
@@ -281,39 +275,72 @@ ExpectedVector<DB::Entities::Post> Booru::FindPosts( StringView const & _QuerySt
 
 ExpectedVector<DB::Entities::PostTag> Booru::GetPostTags() 
 { 
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    return DB::Entities::GetAll<DB::Entities::PostTag>( *db ); 
+    return 
+        GetDatabase()
+        .Then( DB::Entities::GetAll<DB::Entities::PostTag> ); 
 }
 
 ExpectedVector<DB::Entities::Tag> Booru::GetTagsForPost( DB::INTEGER _PostId )
 {
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( stmt, db.Value->PrepareStatement( R"SQL(
-        SELECT * FROM Tags WHERE Tags.Id IN
-            ( SELECT TagId FROM PostTags WHERE PostTags.PostId = $PostId ) 
-        )SQL" ));
-    CHECK_RETURN_RESULT_ON_ERROR( stmt.Value->BindValue( "PostId", _PostId ) );
-    return stmt.Value->ExecuteList<DB::Entities::Tag>();
+    static auto tagIdSubQuery = 
+        DB::Query::Select(DB::Entities::PostTag::Table)
+        .Column( "TagId" )
+        .Where( DB::Query::Where::Equal( "PostId", "$PostId ") );
+
+    static auto tagQuery = 
+        DB::Query::Select(DB::Entities::Tag::Table)
+        .Where( DB::Query::Where::In( "Tags.Id", tagIdSubQuery ) );
+
+    return GetDatabase()
+        .Then( [=](auto db) { return tagQuery.Prepare(db); } )
+        .Then( [=](auto s ) { return s->BindValue( "PostId", _PostId )
+                                  .Then( [](auto s ) { return s->template ExecuteList<DB::Entities::Tag>(); } );
+                            } );
 }
 
 ExpectedVector<DB::Entities::Post> Booru::GetPostsForTag( DB::INTEGER _TagId )
 {
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( stmt, db.Value->PrepareStatement( R"SQL(
-        SELECT * FROM Posts WHERE Posts.Id IN
-            ( SELECT PostId FROM PostTags WHERE PostTags.TagId = $TagId ) 
-        )SQL" ));
-    CHECK_RETURN_RESULT_ON_ERROR( stmt.Value->BindValue( "TagId", _TagId ) );
-    return stmt.Value->ExecuteList<DB::Entities::Post>();
+    static auto postIdSubQuery = 
+        DB::Query::Select(DB::Entities::PostTag::Table)
+        .Column( "TagId" )
+        .Where( DB::Query::Where::Equal( "TagId", "$TagId ") );
+
+    static auto postQuery =
+        DB::Query::Select(DB::Entities::Post::Table)
+        .Where( DB::Query::Where::In( "Posts.Id", postIdSubQuery ));
+
+    return GetDatabase()
+        .Then( [=](auto db) { return postQuery.Prepare(db); } )
+        .Then( [=](auto s ) { return s->BindValue( "TagId", _TagId )
+                                  .Then( [](auto s ) { return s->template ExecuteList<DB::Entities::Post>(); } );
+                            } );
+}
+
+template<class TValue>
+static inline auto BindValue( DB::DatabasePreparedStatementInterface* stmt, StringView const & _Name, TValue const & _Value )
+{
+    return stmt->BindValue( _Name, _Value );
+}
+
+template<class TValue>
+static inline auto BindValue( Owning<DB::DatabasePreparedStatementInterface> const & stmt, StringView const & _Name, TValue const & _Value )
+{
+    return BindValue( stmt.get(), _Name, _Value );
 }
 
 Expected<DB::Entities::PostTag> Booru::FindPostTag( DB::INTEGER _PostId, DB::INTEGER _TagId )
 {
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( stmt, db.Value->PrepareStatement( "SELECT * FROM PostTags WHERE PostId = $PostId AND TagId = $TagId" ) );
-    CHECK_RETURN_RESULT_ON_ERROR( stmt.Value->BindValue( "PostId", _PostId ) );
-    CHECK_RETURN_RESULT_ON_ERROR( stmt.Value->BindValue( "TagId", _TagId ) );
-    return stmt.Value->ExecuteRow<DB::Entities::PostTag>();
+    static auto postTagQuery = 
+        DB::Query::Select( DB::Entities::PostTag::Table )
+        .Where( DB::Query::Where::Equal( "PostId", "$PostId" ) )
+        .Where( DB::Query::Where::Equal( "TagId", "$TagId" ) );
+
+    return GetDatabase()
+        .Then( [ ](auto db) { return postTagQuery.Prepare(db); } )
+        .Then( [&](auto s ) { return s->BindValue( "TagId", _TagId )
+                                .Then( [&](auto s){ return s->BindValue( "PostId", _PostId ); } )
+                                .Then( [ ](auto s){ return s->template ExecuteRow<DB::Entities::PostTag>(true); } );
+                            } );
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////
@@ -322,14 +349,16 @@ Expected<DB::Entities::PostTag> Booru::FindPostTag( DB::INTEGER _PostId, DB::INT
 
 ExpectedVector<DB::Entities::PostFile> Booru::GetPostFiles()
 {
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    return DB::Entities::GetAll<DB::Entities::PostFile>( *db );
+    return 
+        GetDatabase()
+        .Then( DB::Entities::GetAll<DB::Entities::PostFile> );
 }
 
 ExpectedVector<DB::Entities::PostFile> Booru::GetFilesForPost( DB::INTEGER _PostId )
 {
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    return DB::Entities::GetAllWithKey<DB::Entities::PostFile>( *db, "PostId", _PostId );
+    return 
+        GetDatabase()
+        .Then( [&](auto db){ return DB::Entities::GetAllWithKey<DB::Entities::PostFile>( db, "PostId", _PostId ); } );
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////
@@ -338,14 +367,16 @@ ExpectedVector<DB::Entities::PostFile> Booru::GetFilesForPost( DB::INTEGER _Post
 
 ExpectedVector<DB::Entities::PostSiteId> Booru::GetPostSiteIds()
 {
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    return DB::Entities::GetAll<DB::Entities::PostSiteId>( *db );
+    return 
+        GetDatabase()
+        .Then( DB::Entities::GetAll<DB::Entities::PostSiteId> );
 }
 
 ExpectedVector<DB::Entities::PostSiteId> Booru::GetPostSiteIdsForPost( DB::INTEGER _PostId )
 {
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    return DB::Entities::GetAllWithKey<DB::Entities::PostSiteId>( *db, "PostId", _PostId );
+    return
+        GetDatabase()
+        .Then( [&](auto db){ return DB::Entities::GetAllWithKey<DB::Entities::PostSiteId>( db, "PostId", _PostId ); });
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////
@@ -354,14 +385,16 @@ ExpectedVector<DB::Entities::PostSiteId> Booru::GetPostSiteIdsForPost( DB::INTEG
 
 Expected<DB::Entities::Site> Booru::GetSite( DB::INTEGER _Id )
 {
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    return DB::Entities::GetWithKey<DB::Entities::Site>( *db, "Id", _Id );
+    return 
+        GetDatabase()
+        .Then( [&](auto db) { return DB::Entities::GetWithKey<DB::Entities::Site>( db, "Id", _Id ); } );
 }
 
 Expected<DB::Entities::Site> Booru::GetSite( DB::TEXT const & _Name )
 {
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    return DB::Entities::GetWithKey<DB::Entities::Site>( *db, "Name", _Name );
+    return 
+        GetDatabase()
+        .Then( [&](auto db) { return DB::Entities::GetWithKey<DB::Entities::Site>( db, "Name", _Name ); } );
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////
@@ -371,20 +404,23 @@ Expected<DB::Entities::Site> Booru::GetSite( DB::TEXT const & _Name )
 
 ExpectedVector<DB::Entities::Tag> Booru::GetTags()
 { 
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    return DB::Entities::GetAll<DB::Entities::Tag>( *db ); 
+    return 
+        GetDatabase()
+        .Then( DB::Entities::template GetAll<DB::Entities::Tag> );
 }
 
 Expected<DB::Entities::Tag> Booru::GetTag( DB::INTEGER _Id )
 {
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    return DB::Entities::GetWithKey<DB::Entities::Tag>( *db, "Id", _Id );
+    return 
+        GetDatabase()
+        .Then( [&](auto db) { return DB::Entities::GetWithKey<DB::Entities::Tag>( db, "Id", _Id ); } );
 }
 
 Expected<DB::Entities::Tag> Booru::GetTag( DB::TEXT const & _Name )
 {
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    return DB::Entities::GetWithKey<DB::Entities::Tag>( *db, "Name", _Name );
+    return 
+        GetDatabase()
+        .Then( [&](auto db) { return DB::Entities::GetWithKey<DB::Entities::Tag>( db, "Name", _Name ); } );
 }
 
 ExpectedVector<DB::Entities::Tag> Booru::MatchTags( StringView const & _Pattern )
@@ -442,10 +478,11 @@ ExpectedVector<DB::Entities::Tag> Booru::MatchTags( StringView const & _Pattern 
         asterPos          = pattern.find( '*' );
     }
 
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    CHECK_VAR_RETURN_RESULT_ON_ERROR(stmt, db.Value->PrepareStatement( "SELECT * FROM Tags WHERE Name LIKE $Pattern ESCAPE '\\'" ) );
-    CHECK_RETURN_RESULT_ON_ERROR( stmt.Value->BindValue( "Pattern", pattern ) );
-    return stmt.Value->ExecuteList<DB::Entities::Tag>();
+    return 
+        GetDatabase()
+        .Then( [&](auto db){ return db->PrepareStatement( "SELECT * FROM Tags WHERE Name LIKE $Pattern ESCAPE '\\'" ); } )
+        .Then( [&](auto s ){ return s->BindValue( "Pattern", pattern ); } )
+        .Then( [&](auto s ){ return s->template ExecuteList<DB::Entities::Tag>(); } );
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////
@@ -454,14 +491,16 @@ ExpectedVector<DB::Entities::Tag> Booru::MatchTags( StringView const & _Pattern 
 
 ExpectedVector<DB::Entities::TagImplication> Booru::GetTagImplications()
 {
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    return DB::Entities::GetAll<DB::Entities::TagImplication>( *db );
+    return 
+        GetDatabase()
+        .Then( DB::Entities::GetAll<DB::Entities::TagImplication> );
 }
 
 ExpectedVector<DB::Entities::TagImplication> Booru::GetTagImplicationsForTag( DB::INTEGER _TagId )
 {
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    return DB::Entities::GetAllWithKey<DB::Entities::TagImplication>( *db, "TagId", _TagId );
+    return
+        GetDatabase()
+        .Then( [&](auto db) { return DB::Entities::GetAllWithKey<DB::Entities::TagImplication>( db, "TagId", _TagId ); });
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////
@@ -470,20 +509,23 @@ ExpectedVector<DB::Entities::TagImplication> Booru::GetTagImplicationsForTag( DB
 
 ExpectedVector<DB::Entities::TagType> Booru::GetTagTypes() 
 { 
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    return DB::Entities::GetAll<DB::Entities::TagType>( *db ); 
+    return 
+        GetDatabase()
+        .Then( DB::Entities::GetAll<DB::Entities::TagType> );
 }
 
 Expected<DB::Entities::TagType> Booru::GetTagType( DB::INTEGER _Id )
 {
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    return DB::Entities::GetWithKey<DB::Entities::TagType>( *db, "Id", _Id );
+    return
+        GetDatabase()
+        .Then( [&](auto db) { return DB::Entities::GetWithKey<DB::Entities::TagType>( db, "Id", _Id ); } );
 }
 
 Expected<DB::Entities::TagType> Booru::GetTagType( DB::TEXT const & _Name )
 {
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
-    return DB::Entities::GetWithKey<DB::Entities::TagType>( *db, "Name", _Name );
+    return
+        GetDatabase()
+        .Then( [&](auto db) { return DB::Entities::GetWithKey<DB::Entities::TagType>( db, "Name", _Name ); } );
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////
@@ -494,9 +536,9 @@ Expected<String> Booru::GetSQLConditionForTag( StringView const & _Tag )
 {
     if ( _Tag[0] == '-' )
     {
-        Expected<String> subCondition = GetSQLConditionForTag( _Tag.substr( 1 ) );
-        CHECK_RETURN_RESULT_ON_ERROR( subCondition );
-        return "NOT " + subCondition.Value;
+        return 
+            GetSQLConditionForTag( _Tag.substr( 1 ) )
+            .Then( [ ](auto c ){ return Expected("NOT "s + c); });
     }
 
     String lowerTag = Strings::ToLower( _Tag );
@@ -531,7 +573,11 @@ Expected<String> Booru::GetSQLConditionForTag( StringView const & _Tag )
 
     // match actual tags
 
-    CHECK_VAR_RETURN_RESULT_ON_ERROR( tags, MatchTags( _Tag ) );
+    CHECK_VAR_RETURN_RESULT_ON_ERROR( 
+        ids, 
+        MatchTags( _Tag )
+        .Then( DB::Entities::CollectIds<DB::Entities::Tag> )
+    );
 
     return "( "
            "   ( "
@@ -539,7 +585,7 @@ Expected<String> Booru::GetSQLConditionForTag( StringView const & _Tag )
            "       FROM    PostTags "
            "       WHERE   PostTags.PostId =   Posts.Id "
            "       AND     PostTags.TagId  IN  (" +
-           Strings::JoinXForm( CollectIds( tags.Value ), ", " ) +
+           Strings::JoinXForm( ids.Value, ", " ) +
            ") "
            "   ) > 0 "
            ") ";
@@ -550,7 +596,7 @@ ResultCode Booru::CreateTables()
     CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
     LOG_INFO( "Creating database tables..." );
 
-    DB::TransactionGuard guard(*db);
+    DB::TransactionGuard guard(db.Value);
     CHECK_RETURN_RESULT_ON_ERROR( db.Value->ExecuteSQL( SQLGetBaseSchema() ) );
     guard.Commit();
 
@@ -562,7 +608,7 @@ ResultCode Booru::UpdateTables( int64_t _Version )
     CHECK_VAR_RETURN_RESULT_ON_ERROR( db, GetDatabase() );
     LOG_INFO( "Upgrading database schema to version {}...", _Version );
 
-    DB::TransactionGuard guard(*db);
+    DB::TransactionGuard guard(db.Value);
     CHECK_RETURN_RESULT_ON_ERROR( db.Value->ExecuteSQL( SQLGetUpdateSchema( _Version ) ) );
     guard.Commit();
 

@@ -3,33 +3,56 @@
 #include <booru/common.hh>
 
 #include <sstream>
-
-// formatter for optional values
-template<class TValue>
-struct std::formatter<Booru::Optional<TValue>>
+namespace Booru
 {
-	template<typename ParseContext>
-	constexpr auto parse(ParseContext& _Ctx)
-	{
-		return _Ctx.begin();
-	}
 
-	template<typename FormatContext>
-	auto format(const Booru::Optional<TValue>& _Opt, FormatContext& _Ctx) const
-	{
-        if (_Opt.has_value())
-    		return format_to(_Ctx.out(), "{}", _Opt.value());
-		return format_to(_Ctx.out(), "<null>");
-	}
-};
-
-template<class TValue>
-std::ostream & operator<<(std::ostream & _Stream, Booru::Optional<TValue> _Value )
+static inline uint8_t HexCharToInt( char _C )
 {
-    return _Stream << std::format( "{}", _Value );
+    if ( _C >= '0' && _C <= '9' )
+        return _C - '0';
+    return 10 + ::toupper( _C ) - 'A';
 }
 
-namespace Booru::Strings
+static inline char IntToHexChar( uint8_t _I )
+{
+    static char const hex[] = "0123456789abcdef";
+    return hex[_I % 16];
+}
+
+/// @brief Build a hexadecimal string from a number of bytes.
+/// @param _Data Data bytes to convert.
+/// @return A hexadecimal representation of the given strings.
+template<class TValue>
+String ToString( TValue const & _Value )
+{
+    std::stringstream ss;
+    ss << _Value;
+    return ss.str();
+}
+
+template<class TValue>
+String ToString( Optional<TValue> const & _Value )
+{
+    return _Value.has_value() ? ToString(_Value.value()) : "<null>"s;
+}
+
+template<class TContainer> requires CByteContainer<TContainer>
+static inline String ToString( TContainer const & _Data )
+{
+    // preallocate string, two digits per byte
+    String str;
+    str.reserve( _Data.size() * 2 );
+
+    // convert each byte into digits and append
+    for ( auto& ch : _Data )
+    {
+        str += IntToHexChar( ch >> 4 );
+        str += IntToHexChar( ch & 0xf );
+    }
+    return str;
+}
+
+namespace Strings
 {
 
 /// @brief Splits a string based on a delimiter into a vector of strings.
@@ -44,66 +67,16 @@ StringVector Split( StringView const & _Str, char _Delim = ' ' );
 /// @return A string containing all input strings separated by _Sep. If only one or zero input strings are given, no separator is used.
 String Join( StringVector const& _Items, StringView const & _Sep = ", " );
 
-/// @brief Build a hexadecimal string from a number of bytes.
-/// @param _Data Data bytes to convert.
-/// @return A hexadecimal representation of the given strings.
-String From( ByteSpan const & _Data );
-
 /// @brief Parse a hexadecimal string into a byte array.
 /// @param _Hex Hexadecimal string to parse.
 /// @return A vector containing the bytes from the string, or an error code.
 Expected<ByteVector> ParseHex( StringView const & _Hex );
 
-/// @brief Convert a byte array to a hexadecimal string.
-/// Specialization for fixed arrays. Calls From( ByteSpan ).
-/// @param _Data Data bytes to convert. 
-/// @return A hexadecimal representation of the given data.
-template <size_t N>
-static inline String From( ByteArray<N> const & _Data )
-{
-    return From( ByteSpan(_Data) );
-}
-
-/// @brief Convert a byte array to a hexadecimal string.
-/// Specialization for dynamic arrays. Calls From( ByteSpan ).
-/// @param _Data Data bytes to convert. 
-/// @return A hexadecimal representation of the given data.
-static inline String From( ByteVector const & _Data )
-{
-    return From( ByteSpan(_Data) );
-}
-
-/// @brief General template for converting types to string. Uses operator<< of the type
-/// @tparam TValue Type of value to convert.
-/// @param _Item Value to convert.
-/// @return A string representing the given value.
-template <class TValue>
-static inline String From( TValue const & _Item )
-{
-    std::stringstream ss;
-    ss << _Item;
-    return ss.str();
-}
-
-/// @brief Convert an optional value to a string.
-/// @param _Item Optional value to convert. 
-/// @return A string representation of the given optional value. 
-/// If the optional value is unset, returns "<null>".
-template <class TValue>
-static inline String From( Optional<TValue> & _Item )
-{
-    if ( _Item.has_value() )
-    {
-        return From( _Item.value() );
-    }
-    return "<null>";
-}
-
 /// @brief Operator for std::transform to create a String from a value.
 template <class TValue>
 struct XFormFrom
 {
-    String operator() (TValue const & _In) const { return From(_In); }
+    String operator() (TValue const & _In) const { return ToString(_In); }
 };
 
 /// @brief Specialization of std::transform operator for things that already are Strings.
@@ -112,6 +85,7 @@ struct XFormFrom<String>
 {
     String operator() (String const & _In) const { return _In; }
 };
+
 
 /// @brief Join a vector of value into a string. Converts each item into a string then
 /// joins them together using the separator _Sep.
@@ -132,3 +106,4 @@ static inline String JoinXForm( TContainer const& _Items, StringView const & _Se
 String ToLower( StringView const & _Str );
 
 } // namespace Booru::Strings
+}

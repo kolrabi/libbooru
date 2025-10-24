@@ -57,4 +57,31 @@ static inline Owning<TValue> MakeOwning( Args... args )
     return std::make_unique<TValue>( args... );
 }
 
+template<class TContainer> 
+concept CContainer = requires
+{
+    typename TContainer::const_iterator;
+    typename TContainer::value_type;
+};
+
+template<class TContainer> 
+concept CByteContainer = requires
+{
+    requires CContainer<TContainer>;
+    requires std::same_as<typename TContainer::value_type, Byte>;
+};
+
+template<class TValue> 
+concept CStringConvertible = requires (TValue const & value)
+{
+    ToString(value);
+};
+
+template<class TContainer> 
+concept CStringConvertibleContainer = requires
+{
+    requires CContainer<TContainer>;
+    requires CStringConvertible<typename TContainer::value_type>;
+};
+
 } // namespace Booru

@@ -13,21 +13,21 @@ class DatabasePreparedStatementSqlite3 : public DatabasePreparedStatementInterfa
     explicit DatabasePreparedStatementSqlite3( sqlite3_stmt* _Handle );
     virtual ~DatabasePreparedStatementSqlite3() override;
 
-    ResultCode BindValue( StringView const & _Name,  ByteSpan const& _Blob ) override;
+    Expected<DatabasePreparedStatementInterface*> BindValue( StringView const & _Name,  ByteSpan const& _Blob ) override;
     // ResultCode BindValue( StringView const & _Name, void const* _Blob, size_t _Size ) override;
-    ResultCode BindValue( StringView const & _Name, FLOAT _Value ) override;
-    ResultCode BindValue( StringView const & _Name, INTEGER _Value ) override;
-    ResultCode BindValue( StringView const & _Name, TEXT const& _Value ) override;
-    ResultCode BindNull(  StringView const & _Name ) override;
+    Expected<DatabasePreparedStatementInterface*> BindValue( StringView const & _Name, FLOAT _Value ) override;
+    Expected<DatabasePreparedStatementInterface*> BindValue( StringView const & _Name, INTEGER _Value ) override;
+    Expected<DatabasePreparedStatementInterface*> BindValue( StringView const & _Name, TEXT const& _Value ) override;
+    Expected<DatabasePreparedStatementInterface*> BindNull(  StringView const & _Name ) override;
 
-    ResultCode GetColumnValue( int _Index, ByteVector& ) override;
-    ResultCode GetColumnValue( int _Index, FLOAT& _Value ) override;
-    ResultCode GetColumnValue( int _Index, INTEGER& _Value ) override;
-    ResultCode GetColumnValue( int _Index, TEXT& _Value ) override;
+    Expected<DatabasePreparedStatementInterface*> GetColumnValue( int _Index, ByteVector& ) override;
+    Expected<DatabasePreparedStatementInterface*> GetColumnValue( int _Index, FLOAT& _Value ) override;
+    Expected<DatabasePreparedStatementInterface*> GetColumnValue( int _Index, INTEGER& _Value ) override;
+    Expected<DatabasePreparedStatementInterface*> GetColumnValue( int _Index, TEXT& _Value ) override;
     bool ColumnIsNull( int _Index ) override;
 
     Expected<int> GetColumnIndex( StringView const & _Name ) override;
-    ResultCode Step( bool _NeedRow = false ) override;
+    Expected<DatabasePreparedStatementInterface*> Step( bool _NeedRow = false ) override;
 
   private:
     sqlite3_stmt* m_Handle;

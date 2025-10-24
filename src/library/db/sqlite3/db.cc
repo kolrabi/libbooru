@@ -126,14 +126,11 @@ ResultCode DatabaseSqlite3::RollbackTransaction()
     return ResultCode::OK;
 }
 
-ResultCode DatabaseSqlite3::GetLastRowId( INTEGER& _Id )
+Expected<INTEGER> DatabaseSqlite3::GetLastRowId( )
 {
-    auto stmt = PrepareStatement( "SELECT last_insert_rowid();" );
-    CHECK_RETURN_RESULT_ON_ERROR( stmt.Code );
-    auto result = stmt.Value->ExecuteScalar<INTEGER>( true );
-    _Id         = result.Value;
-    CHECK_RETURN_RESULT_ON_ERROR( result.Code );
-    return ResultCode::CreatedOK;
+    return 
+        PrepareStatement( "SELECT last_insert_rowid();" )
+        .Then( [](auto s){ return s->template ExecuteScalar<INTEGER>(true); });
 }
 
 } // namespace Booru::DB::Sqlite3

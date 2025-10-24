@@ -74,6 +74,39 @@ struct [[nodiscard]] Expected
     /// @brief Implicit operator to retrieve value.
     operator TValue() const { return Value; }
 
+    template<typename Callable, class TRet>
+    auto Then(std::function<TRet(TValue const &)> _Callable) -> TRet
+    {
+        if ( ResultIsError(Code) )
+            return { Code };
+        return _Callable( Value );
+    }
+
+    template<class Callable>
+    auto Then(Callable _Callable) 
+        -> decltype( _Callable( std::move(Value) ) )
+    {
+        if ( ResultIsError(Code) )
+            return { Code };
+        return _Callable( std::move(Value) );
+    }
+
+    template<class Callable, class TRet, typename... TArgs>
+    auto Then(std::function<TRet(TValue const &, TArgs...)>&& _Callable, TArgs...args) 
+        -> decltype( _Callable( Value, args... ) )
+    {
+        if ( ResultIsError(Code) )
+            return { Code };
+        return _Callable( Value, args... );
+    }
+
+    Expected OnError(auto _Callable)
+    {
+        if ( ResultIsError(Code) )
+            _Callable( Code );
+        return std::move(*this);
+    }
+
     /// @brief Builds an Expected object from a result code and a value object.
     /// _Object is only moved if _Code is a success code.
     static inline Expected<TValue> ErrorOrObject( ResultCode _Code, TValue && _Object )
@@ -95,31 +128,32 @@ using ExpectedVector = Expected<std::vector<TValue>>;
 
 // helper functions for result checking and logging 
 
-template<class TValue, class...Args>
-static inline bool CheckResult( String const & _LoggerName, TValue const & _Result, StringView const & _ResultStr, StringView const & _Func)
-{
-    auto logger = log4cxx::Logger::getLogger(_LoggerName);
-    if ( ResultIsError(_Result) )
-    {
-        LOG4CXX_ERROR_FMT( logger, "{}(): {} failed: {}", _Func, _ResultStr, ResultToString(_Result) );
-        return true;
-    }
-    LOG4CXX_TRACE_FMT( logger, "{}(): {} OK ({})!", _Func, _ResultStr, ResultToString(_Result) );
-    return false;
-}
-
+/// @brief Check and log result.
+/// @tparam Type of result.
+/// @tparam TArgs... Message argument types
+/// @param _LoggerName Name of logger to use.
+/// @param _Result The result to check.
+/// @param _ResultStr Result expression as string.
+/// @param _Func Function in which the result is checked.
+/// @param _Msg Optional message to log.
+/// @return True if result was error.
 template<class TValue, class...TArgs>
-static inline bool CheckResult( String const & _LoggerName, TValue const & _Result, StringView const & _ResultStr, StringView const & _Func, StringView const & _Msg, TArgs const & ...args)
+static inline bool CheckResult( String const & _LoggerName, TValue const & _Result, StringView const & _ResultStr, std::source_location const _Location, StringView const & _Msg = "", TArgs const & ...args)
 {
-    auto logger = log4cxx::Logger::getLogger(_LoggerName);
+    if ( _LoggerName.empty() )
+        return ResultIsError( _Result );
+
+    auto logger = log4cxx::Logger::getLogger( String( _LoggerName ) );
     if ( ResultIsError(_Result) )
     {
-        LOG4CXX_ERROR_FMT( logger, "{}(): {} failed: {}", _Func, _ResultStr, ResultToString(_Result) );
-        LOG4CXX_ERROR_FMT( logger, "{}", std::vformat(_Msg, std::make_format_args(args...)) );
+        LOG4CXX_ERROR_FMT( logger, "{}:{}:{}: {} failed: {}", _Location.file_name(), _Location.line(), _Location.function_name(), _ResultStr, ResultToString(_Result) );
+        if ( !_Msg.empty() )
+            LOG4CXX_ERROR_FMT( logger, "{}", std::vformat(_Msg, std::make_format_args(args...)) );
         return true;
     }
-    LOG4CXX_TRACE_FMT( logger, "{}(): {} OK ({})!", _Func, _ResultStr, ResultToString(_Result) );
-    LOG4CXX_TRACE_FMT( logger, "{}", std::vformat(_Msg, std::make_format_args(args...)) );
+    LOG4CXX_TRACE_FMT( logger, "{}:{}:{}: {} OK ({})!", _Location.file_name(), _Location.line(), _Location.function_name(), _ResultStr, ResultToString(_Result) );
+    if ( !_Msg.empty() )
+        LOG4CXX_TRACE_FMT( logger, "{}", std::vformat(_Msg, std::make_format_args(args...)) );
     return false;
 }
 
@@ -127,22 +161,22 @@ static inline bool CheckResult( String const & _LoggerName, TValue const & _Resu
 
 // Check x, On error: log error with var args, resume.
 #define CHECK( x, ... )\
-    { auto const & _result = (x); CheckResult(LOGGER, _result, #x, __func__ __VA_OPT__(,) __VA_ARGS__); }
+    { auto const & _result = (x); CheckResult(LOGGER, _result, #x, std::source_location::current() __VA_OPT__(,) __VA_ARGS__); }
 
 #define CHECK_RETURN( x, ... )\
-    { auto const & _result = (x); CheckResult(LOGGER, _result, #x, __func__ __VA_OPT__(,) __VA_ARGS__); return _result; }
+    { auto const & _result = (x); CheckResult(LOGGER, _result, #x, std::source_location::current() __VA_OPT__(,) __VA_ARGS__); return _result; }
 
 // Check x. On error: log error with var args, return error code.
 #define CHECK_RETURN_RESULT_ON_ERROR( x, ... )\
-    { auto const & _result = (x); if (CheckResult(LOGGER, _result, #x, __func__ __VA_OPT__(,) __VA_ARGS__)) return (ResultCode)_result; }
+    { auto const & _result = (x); if (CheckResult(LOGGER, _result, #x, std::source_location::current() __VA_OPT__(,) __VA_ARGS__)) return (ResultCode)_result; }
 
 // Check x. On error: log error with var args, continue in loop.
 #define CHECK_CONTINUE_ON_ERROR( x, ... )\
-    { auto const & _result = (x); if (CheckResult(LOGGER, _result, #x, __func__ __VA_OPT__(,) __VA_ARGS__)) continue; }
+    { auto const & _result = (x); if (CheckResult(LOGGER, _result, #x, std::source_location::current() __VA_OPT__(,) __VA_ARGS__)) continue; }
 
 // Check x. On error: log error with var args, break from loop.
 #define CHECK_BREAK_ON_ERROR( x, ... )\
-    { auto const & _result = (x); if (CheckResult(LOGGER, _result, #x, __func__ __VA_OPT__(,) __VA_ARGS__)) break; }
+    { auto const & _result = (x); if (CheckResult(LOGGER, _result, #x, std::source_location::current() __VA_OPT__(,) __VA_ARGS__)) break; }
 
 // Assert that x is true, logs failure.
 #define CHECK_ASSERT( x )\

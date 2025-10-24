@@ -4,8 +4,6 @@
 namespace Booru::Strings
 {
 
-static constexpr String LOGGER = "booru.strings";
-
 StringVector Split( StringView const & _Str, char _Delim )
 {
     StringVector tokens;
@@ -32,6 +30,7 @@ String Join( StringVector const& _Items, StringView const & _Sep )
 
     // append items and separators
     bool first = true;
+    // todo: ranges skip 
     for ( auto const& item : _Items )
     {
         if ( !first )
@@ -39,35 +38,7 @@ String Join( StringVector const& _Items, StringView const & _Sep )
             str += _Sep;
         }
         first = false;
-        str += From( item );
-    }
-    return str;
-}
-
-static inline uint8_t HexCharToInt( char _C )
-{
-    if ( _C >= '0' && _C <= '9' )
-        return _C - '0';
-    return 10 + ::toupper( _C ) - 'A';
-}
-
-static inline char IntToHexChar( uint8_t _I )
-{
-    static char const hex[] = "0123456789abcdef";
-    return hex[_I % 16];
-}
-
-String From( ByteSpan const & _Data )
-{
-    // preallocate string, two digits per byte
-    String str;
-    str.reserve( _Data.size() * 2 );
-
-    // convert each byte into digits and append
-    for ( size_t i = 0; i < _Data.size(); i++ )
-    {
-        str += IntToHexChar( _Data[i] >> 4 );
-        str += IntToHexChar( _Data[i] & 0xf );
+        str += item;
     }
     return str;
 }

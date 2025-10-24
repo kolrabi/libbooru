@@ -49,8 +49,8 @@ static inline void test_check_error(Booru::ResultCode _Code, char const * _Cond)
 template<class T, class U>
 static inline void test_equal(T const & a, U const & b, char const * _CondA, char const * _CondB)
 {
-    auto aStr = Booru::Strings::From(a);
-    auto bStr = Booru::Strings::From(b);
+    auto aStr = Booru::ToString(a);
+    auto bStr = Booru::ToString(b);
     if ( !(a == b) )
     {
         LOG_ERROR("{} != {}\nA = {}\nB = {}", _CondA, _CondB, aStr, bStr);

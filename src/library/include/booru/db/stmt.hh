@@ -18,17 +18,17 @@ class DatabasePreparedStatementInterface
     // Bind values to statement arguments.
     // ////////////////////////////////////////////////////////////////////////////////////////////
 
-    virtual ResultCode BindValue( StringView const & _Name, ByteSpan const& _Blob )  = 0;
-    virtual ResultCode BindValue( StringView const & _Name, FLOAT _Value )           = 0;
-    virtual ResultCode BindValue( StringView const & _Name, INTEGER _Value )         = 0;
-    virtual ResultCode BindValue( StringView const & _Name, TEXT const& _Value )     = 0;
-    virtual ResultCode BindNull(  StringView const & _Name )                         = 0;
+    virtual Expected<DatabasePreparedStatementInterface*> BindValue( StringView const & _Name, ByteSpan const& _Blob )  = 0;
+    virtual Expected<DatabasePreparedStatementInterface*> BindValue( StringView const & _Name, FLOAT _Value )           = 0;
+    virtual Expected<DatabasePreparedStatementInterface*> BindValue( StringView const & _Name, INTEGER _Value )         = 0;
+    virtual Expected<DatabasePreparedStatementInterface*> BindValue( StringView const & _Name, TEXT const& _Value )     = 0;
+    virtual Expected<DatabasePreparedStatementInterface*> BindNull(  StringView const & _Name )                         = 0;
 
     template <size_t BlobSize>
-    ResultCode BindValue( StringView const & _Name, BLOB<BlobSize> const& _Value );
+    Expected<DatabasePreparedStatementInterface*> BindValue( StringView const & _Name, BLOB<BlobSize> const& _Value );
 
     template <class TValue>
-    ResultCode BindValue( StringView const & _Name, NULLABLE<TValue> const& _Value );
+    Expected<DatabasePreparedStatementInterface*> BindValue( StringView const & _Name, NULLABLE<TValue> const& _Value );
 
     // ////////////////////////////////////////////////////////////////////////////////////////////
     // Retrieve returned values from an executed statement.
@@ -36,10 +36,10 @@ class DatabasePreparedStatementInterface
 
     virtual Expected<int> GetColumnIndex( StringView const & _Name ) = 0;
 
-    virtual ResultCode GetColumnValue( int _Index, ByteVector& ) = 0;
-    virtual ResultCode GetColumnValue( int _Index, FLOAT& _Value )                     = 0;
-    virtual ResultCode GetColumnValue( int _Index, INTEGER& _Value )                   = 0;
-    virtual ResultCode GetColumnValue( int _Index, TEXT& _Value )                      = 0;
+    virtual Expected<DatabasePreparedStatementInterface*> GetColumnValue( int _Index, ByteVector& ) = 0;
+    virtual Expected<DatabasePreparedStatementInterface*> GetColumnValue( int _Index, FLOAT& _Value )                     = 0;
+    virtual Expected<DatabasePreparedStatementInterface*> GetColumnValue( int _Index, INTEGER& _Value )                   = 0;
+    virtual Expected<DatabasePreparedStatementInterface*> GetColumnValue( int _Index, TEXT& _Value )                      = 0;
     virtual bool ColumnIsNull( int _Index )                                            = 0;
 
     template <size_t BlobSize>
@@ -58,7 +58,7 @@ class DatabasePreparedStatementInterface
     /// @brief Execute statement, advance to next row
     /// @param _NeedRow If true, return an error if there is no row returned.
     /// @return Result code.
-    virtual ResultCode Step( bool _NeedRow = false ) = 0;
+    virtual Expected<DatabasePreparedStatementInterface*> Step( bool _NeedRow = false ) = 0;
 
     /// @brief Execute statement, return single value. First row, first column.
     /// @tparam TValue Type of value to return.
@@ -88,14 +88,13 @@ class DatabasePreparedStatementInterface
 // Bind values.
 
 template <size_t BlobSize>
-ResultCode DatabasePreparedStatementInterface::BindValue( StringView const & _Name, BLOB<BlobSize> const& _Value )
+Expected<DatabasePreparedStatementInterface*> DatabasePreparedStatementInterface::BindValue( StringView const & _Name, BLOB<BlobSize> const& _Value )
 {
     return BindValue( _Name, ByteSpan(_Value) );
 }
 
 template <class TValue>
-ResultCode DatabasePreparedStatementInterface::BindValue( StringView const & _Name,
-                                                          NULLABLE<TValue> const& _Value )
+Expected<DatabasePreparedStatementInterface*> DatabasePreparedStatementInterface::BindValue( StringView const & _Name, NULLABLE<TValue> const& _Value )
 {
     if ( _Value.has_value() )
     {
@@ -148,11 +147,8 @@ ResultCode DatabasePreparedStatementInterface::GetColumnValue( int _Index, NULLA
 template <class TValue>
 ResultCode DatabasePreparedStatementInterface::GetColumnValue( StringView const & _Name, TValue& _Value )
 {
-    auto indexResult = GetColumnIndex( _Name );
-    CHECK_RETURN_RESULT_ON_ERROR( indexResult.Code );
-
-    int index = indexResult.Value;
-    return GetColumnValue( index, _Value );
+    CHECK_VAR_RETURN_RESULT_ON_ERROR( index, GetColumnIndex( _Name ) )
+    return GetColumnValue( index.Value, _Value );
 }
 
 // Execution
@@ -160,11 +156,13 @@ ResultCode DatabasePreparedStatementInterface::GetColumnValue( StringView const 
 template <class TValue>
 Expected<TValue> DatabasePreparedStatementInterface::ExecuteScalar( bool _NeedRow )
 {
-    CHECK_RETURN_RESULT_ON_ERROR( Step( _NeedRow ) );
-
     TValue value;
-    CHECK_RETURN_RESULT_ON_ERROR( GetColumnValue( 0, value ) );
-    return value;
+
+    auto result =
+        Step( _NeedRow )
+        .Then( [&](auto s) { return s->GetColumnValue( 0, value ); } );
+
+    return Expected<TValue>::ErrorOrObject( result, std::move( value ) );
 }
 
 template <class TEntity>
@@ -173,7 +171,7 @@ Expected<TEntity> DatabasePreparedStatementInterface::ExecuteRow( bool _NeedRow 
     CHECK_RETURN_RESULT_ON_ERROR( Step( _NeedRow ) );
 
     TEntity value;
-    CHECK_RETURN_RESULT_ON_ERROR( LoadEntity( value, *this ) );
+    CHECK_RETURN_RESULT_ON_ERROR( LoadEntity( value, this ) );
     return value;
 }
 
@@ -187,7 +185,7 @@ ExpectedVector<TEntity> DatabasePreparedStatementInterface::ExecuteList()
     while ( stepResult != ResultCode::DatabaseEnd )
     {
         TEntity value;
-        CHECK_RETURN_RESULT_ON_ERROR( LoadEntity( value, *this ) );
+        CHECK_RETURN_RESULT_ON_ERROR( LoadEntity( value, this ) );
         values.push_back( value );
         stepResult = Step();
         CHECK_RETURN_RESULT_ON_ERROR( stepResult );

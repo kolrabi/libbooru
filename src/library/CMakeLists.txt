@@ -8,9 +8,8 @@ target_sources(
     booru
 
     PRIVATE
-        library.cc
-
         booru.cc
+        
         result.cc
         string.cc
 
@@ -52,12 +51,20 @@ target_sources(
 
 )
 
+if (MSVC)
+    set(WARNOPTS /W4)
+else()
+    set(WARNOPTS -Wall -Wextra -Wpedantic)
+endif()
+
 set_target_properties( 
     booru 
     PROPERTIES 
         CXX_STANDARD 20
         VERSION ${PROJECT_VERSION} 
         SOVERSION ${PROJECT_VERSION_MAJOR}
+        COMPILE_WARNING_AS_ERROR ON
+        COMPILE_OPTIONS ${WARNOPTS}
 )
 
 target_link_libraries( 

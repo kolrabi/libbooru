@@ -4,7 +4,6 @@ project( libbooru VERSION 0.1.0 LANGUAGES CXX )
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-
 enable_testing( )
 include( CTest )
 

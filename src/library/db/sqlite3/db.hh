@@ -14,7 +14,7 @@ class DatabaseSqlite3 : public DB::DatabaseInterface
     static ExpectedOwning<DatabaseInterface> OpenDatabase( StringView const & _Path );
 
     explicit DatabaseSqlite3( sqlite3* _Handle );
-    virtual ~DatabaseSqlite3();
+    virtual ~DatabaseSqlite3() override;
 
     virtual ExpectedOwning<DatabasePreparedStatementInterface>
     PrepareStatement( StringView const & _SQL ) override;
@@ -24,7 +24,7 @@ class DatabaseSqlite3 : public DB::DatabaseInterface
     virtual ResultCode CommitTransaction() override;
     virtual ResultCode RollbackTransaction() override;
 
-    virtual ResultCode GetLastRowId( INTEGER& _Id ) override;
+    virtual Expected<DB::INTEGER> GetLastRowId( ) override;
 
   private:
     sqlite3* m_Handle = nullptr;

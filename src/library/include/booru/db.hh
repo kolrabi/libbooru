@@ -35,7 +35,7 @@ class DatabaseInterface
     virtual ResultCode RollbackTransaction() = 0;
 
     /// @brief Get unique id for last inserted database row.
-    virtual ResultCode GetLastRowId( INTEGER& _Id ) = 0;
+    virtual Expected<INTEGER> GetLastRowId( ) = 0;
 };
 
 /// @brief RAII transaction guard that handles transaction scope.
@@ -44,11 +44,11 @@ class TransactionGuard
   public:
 
     /// @brief C'tor, enter transaction
-    explicit TransactionGuard( DatabaseInterface& _DB )
+    explicit TransactionGuard( DatabaseInterface* _DB )
         : DB{ _DB }, IsCommited{ false }, IsValid{ false }
     {
         LOG_DEBUG("Transaction Guard {}: BEGIN", static_cast<void*>(this));
-        IsValid = !ResultIsError( this->DB.BeginTransaction() );
+        IsValid = !ResultIsError( DB->BeginTransaction() );
     }
 
     ~TransactionGuard()
@@ -56,7 +56,7 @@ class TransactionGuard
         if ( !this->IsCommited && IsValid )
         {
             LOG_DEBUG("Transaction Guard {}: ROLLBACK", static_cast<void*>(this));
-            CHECK( this->DB.RollbackTransaction() );
+            CHECK( DB->RollbackTransaction() );
         }
     }
 
@@ -65,7 +65,7 @@ class TransactionGuard
         if ( !IsCommited && IsValid )
         {
             LOG_DEBUG("Transaction Guard {}: COMMIT", static_cast<void*>(this));
-            CHECK( this->DB.CommitTransaction() );
+            CHECK( DB->CommitTransaction() );
             this->IsCommited = true;
         }
     }
@@ -75,7 +75,7 @@ class TransactionGuard
         if ( !this->IsCommited && IsValid )
         {
             LOG_DEBUG("Transaction Guard {}: ROLLBACK", static_cast<void*>(this));
-            CHECK( this->DB.RollbackTransaction() );
+            CHECK( DB->RollbackTransaction() );
             this->IsCommited = true;
         }
     }
@@ -83,7 +83,7 @@ class TransactionGuard
     bool GetIsValid() const { return IsValid; }
 
   private:
-    DatabaseInterface& DB;
+    DatabaseInterface* DB;
     bool IsCommited;
     bool IsValid;
 };

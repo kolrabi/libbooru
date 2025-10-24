@@ -8,5 +8,6 @@
 
 #include <format>
 #include <algorithm>
+#include <source_location>
 
 #include <booru/result.hh>

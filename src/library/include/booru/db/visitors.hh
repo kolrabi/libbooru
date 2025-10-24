@@ -10,10 +10,10 @@ namespace Booru::DB::Visitors
 class StatementPropertyVisitor
 {
 public:
-    explicit StatementPropertyVisitor( DB::DatabasePreparedStatementInterface& _Stmt ) : Stmt{ _Stmt } {}
+    explicit StatementPropertyVisitor( DB::DatabasePreparedStatementInterface* _Stmt ) : Stmt{ _Stmt } {}
 
 protected:
-    DB::DatabasePreparedStatementInterface& Stmt;
+    DB::DatabasePreparedStatementInterface* Stmt;
 };
 
 // Visitor that loads data from a statement into an entity property.
@@ -25,7 +25,7 @@ class LoadFromStatementPropertyVisitor : private StatementPropertyVisitor
     template <class TValue>
     ResultCode Property( StringView const & _Name, TValue& _Value, bool _IsPrimaryKey = false )
     {
-        return Stmt.GetColumnValue( _Name, _Value );
+        return Stmt->GetColumnValue( _Name, _Value );
     }
 };
 
@@ -38,7 +38,7 @@ class StoreToStatementPropertyVisitor : private StatementPropertyVisitor
     template <class TValue>
     ResultCode Property( StringView const & _Name, TValue& _Value, bool _IsPrimaryKey = false )
     {
-        return Stmt.BindValue( _Name, _Value );
+        return Stmt->BindValue( _Name, _Value );
     }
 };
 
@@ -55,7 +55,7 @@ class QueryNonPrimaryKeyColumnVisitor final
     {
         if ( !_IsPrimaryKey )
         {
-            this->Query.Column( _Name );
+            Query.Column( _Name );
         }
         return ResultCode::OK;
     }
@@ -92,7 +92,7 @@ class ToStringPropertyVisitor
                 m_String,
                 m_Indent,
                 NameString(_Name),
-                Strings::From(_Value),
+                ToString(_Value),
                 "\n"s
             }, ""sv);
         return ResultCode::OK;

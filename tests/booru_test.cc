@@ -36,7 +36,7 @@ static Booru::Vector<std::pair<Booru::String, void(*)(Booru::Booru &, const Boor
 
         int64_t schemaVersion = Booru::Booru::GetSchemaVersion();
 
-        TEST_CHECK_EQUAL(booru.GetConfig("db.version"), Booru::Strings::From(schemaVersion));
+        TEST_CHECK_EQUAL(booru.GetConfig("db.version"), Booru::ToString(schemaVersion));
         TEST_CHECK_EQUAL(booru.GetConfigInt64("db.version"), schemaVersion);
 
         TEST_CHECK(booru.SetConfig("test.key", "test.value"));
@@ -107,9 +107,10 @@ static Booru::Vector<std::pair<Booru::String, void(*)(Booru::Booru &, const Boor
         TEST_EQUAL(resultVector.Value.size(), 1);
         TEST_EQUAL(resultVector.Value[0], tag);
 
-        auto idVector = Booru::DB::Entities::CollectIds(resultVector.Value);
-        TEST_EQUAL(idVector.size(), 1);
-        TEST_EQUAL(idVector[0], tag.Id);
+        auto idVector = resultVector.Then( Booru::DB::Entities::CollectIds<Booru::DB::Entities::Tag> );
+        TEST_CHECK( idVector );
+        TEST_EQUAL(idVector.Value.size(), 1);
+        TEST_EQUAL(idVector.Value[0], tag.Id);
 
         // retrieve back by name, should have the same values
         TEST_CHECK_EQUAL(booru.GetTag("test.tag"), tag);
@@ -117,7 +118,7 @@ static Booru::Vector<std::pair<Booru::String, void(*)(Booru::Booru &, const Boor
         // retrieve back by id
         TEST_CHECK_EQUAL(booru.GetTag(1), tag);
 
-        resultVector = Booru::DB::Entities::GetAllWithKey<Booru::DB::Entities::Tag>(*db, "Name", "test.tag");
+        resultVector = Booru::DB::Entities::GetAllWithKey<Booru::DB::Entities::Tag>( db, "Name", "test.tag" );
         TEST_CHECK(resultVector);
         TEST_EQUAL(resultVector.Value.size(), 1);
         TEST_EQUAL(resultVector.Value[0], tag);
