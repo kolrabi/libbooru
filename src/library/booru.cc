@@ -170,15 +170,13 @@ namespace Booru
     Expected<DB::Entities::Post> Booru::GetPost(DB::INTEGER _Id)
     {
         return GetDatabase()
-            .Then([&](auto db)
-                  { return DB::Entities::GetWithKey<DB::Entities::Post>(db, "Id", _Id); });
+            .Then(DB::Entities::GetWithKey<DB::Entities::Post, DB::INTEGER>, "Id", _Id);
     }
 
     Expected<DB::Entities::Post> Booru::GetPost(DB::BLOB<16> _MD5)
     {
         return GetDatabase()
-            .Then([&](auto db)
-                  { return DB::Entities::GetWithKey<DB::Entities::Post>(db, "MD5Sum", _MD5); });
+            .Then(DB::Entities::GetWithKey<DB::Entities::Post, DB::BLOB<16>>, "MD5Sum", _MD5);
     }
 
     ResultCode Booru::AddTagToPost(DB::INTEGER _PostId, StringView const &_Tag)
@@ -336,11 +334,11 @@ namespace Booru
             .Then([](auto db)
                   { return postTagQuery.Prepare(db); })
             .Then([&](auto s)
-                  { return s->BindValue("TagId", _TagId)
-                        .Then([&](auto s)
-                              { return s->BindValue("PostId", _PostId); })
-                        .Then([](auto s)
-                              { return s->template ExecuteRow<DB::Entities::PostTag>(true); }); });
+                  { return s->BindValue("TagId", _TagId); })
+            .Then([&](auto s)
+                  { return s->BindValue("PostId", _PostId); })
+            .Then([](auto s)
+                  { return s->template ExecuteRow<DB::Entities::PostTag>(true); });
     }
 
     // ////////////////////////////////////////////////////////////////////////////////////////////
@@ -356,8 +354,7 @@ namespace Booru
     ExpectedVector<DB::Entities::PostFile> Booru::GetFilesForPost(DB::INTEGER _PostId)
     {
         return GetDatabase()
-            .Then([&](auto db)
-                  { return DB::Entities::GetAllWithKey<DB::Entities::PostFile>(db, "PostId", _PostId); });
+            .Then(DB::Entities::GetAllWithKey<DB::Entities::PostFile, DB::INTEGER>, "PostId", _PostId);
     }
 
     // ////////////////////////////////////////////////////////////////////////////////////////////
@@ -415,8 +412,7 @@ namespace Booru
     Expected<DB::Entities::Tag> Booru::GetTag(DB::TEXT const &_Name)
     {
         return GetDatabase()
-            .Then([&](auto db)
-                  { return DB::Entities::GetWithKey<DB::Entities::Tag>(db, "Name", _Name); });
+            .Then(DB::Entities::GetWithKey<DB::Entities::Tag, DB::TEXT>, "Name", _Name);
     }
 
     ExpectedVector<DB::Entities::Tag> Booru::MatchTags(StringView const &_Pattern)
@@ -496,8 +492,7 @@ namespace Booru
     ExpectedVector<DB::Entities::TagImplication> Booru::GetTagImplicationsForTag(DB::INTEGER _TagId)
     {
         return GetDatabase()
-            .Then([&](auto db)
-                  { return DB::Entities::GetAllWithKey<DB::Entities::TagImplication>(db, "TagId", _TagId); });
+            .Then(DB::Entities::GetAllWithKey<DB::Entities::TagImplication, DB::INTEGER>, "TagId", _TagId);
     }
 
     // ////////////////////////////////////////////////////////////////////////////////////////////
@@ -513,15 +508,13 @@ namespace Booru
     Expected<DB::Entities::TagType> Booru::GetTagType(DB::INTEGER _Id)
     {
         return GetDatabase()
-            .Then([&](auto db)
-                  { return DB::Entities::GetWithKey<DB::Entities::TagType>(db, "Id", _Id); });
+            .Then(DB::Entities::GetWithKey<DB::Entities::TagType, DB::INTEGER>, "Id", _Id);
     }
 
     Expected<DB::Entities::TagType> Booru::GetTagType(DB::TEXT const &_Name)
     {
         return GetDatabase()
-            .Then([&](auto db)
-                  { return DB::Entities::GetWithKey<DB::Entities::TagType>(db, "Name", _Name); });
+            .Then(DB::Entities::GetWithKey<DB::Entities::TagType, DB::TEXT>, "Name", _Name);
     }
 
     // ////////////////////////////////////////////////////////////////////////////////////////////

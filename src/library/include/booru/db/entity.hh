@@ -101,7 +101,7 @@ namespace Booru::DB::Entities
 
     /// @brief Try to retrieve a single entity from the database matching the given key in the given column. Only one entity will be returned. If no entity is found, an error will be returned.
     template <class TEntity, class TValue>
-    Expected<TEntity> GetWithKey(DBPtr _DB, StringView const &_KeyColumn, TValue const &_KeyValue)
+    static Expected<TEntity> GetWithKey(DBPtr _DB, StringView const &_KeyColumn, TValue const &_KeyValue)
     {
         auto stmt = DB::Query::Select(TEntity::Table).Key(_KeyColumn).Prepare(_DB);
         CHECK_RETURN_RESULT_ON_ERROR(stmt.Code);

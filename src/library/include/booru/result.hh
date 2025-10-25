@@ -75,21 +75,13 @@ namespace Booru
         /// @brief Implicit operator to retrieve value.
         operator TValue() const { return Value; }
 
-        template <typename Callable, class TRet>
-        auto Then(std::function<TRet(TValue const &)> _Callable) -> TRet
+        template <class Callable, typename... TArgs>
+        auto Then(Callable _Callable, TArgs... args)
+            -> decltype(_Callable(Value, args...))
         {
             if (ResultIsError(Code))
                 return {Code};
-            return _Callable(Value);
-        }
-
-        template <class Callable>
-        auto Then(Callable _Callable)
-            -> decltype(_Callable(Value))
-        {
-            if (ResultIsError(Code))
-                return {Code};
-            return _Callable(Value);
+            return _Callable(Value, args...);
         }
 
         Expected OnError(auto _Callable)

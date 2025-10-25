@@ -3,8 +3,6 @@
 #include <booru/db/entity.hh>
 #include <booru/common.hh>
 
-class DatabaseInterface;
-
 namespace Booru
 {
 
@@ -218,8 +216,7 @@ namespace Booru
         CHECK_RETURN_RESULT_ON_ERROR(_Entity.CheckValidForCreate());
         CHECK_RETURN_RESULT_ON_ERROR(_Entity.CheckValues());
         return GetDatabase()
-            .Then([&](auto db)
-                  { return DB::Entities::Create(db, _Entity); });
+            .Then(DB::Entities::Create<TEntity>, _Entity);
     }
 
     /// @brief Update an new entity in database.
@@ -229,8 +226,7 @@ namespace Booru
         CHECK_RETURN_RESULT_ON_ERROR(_Entity.CheckValidForUpdate());
         CHECK_RETURN_RESULT_ON_ERROR(_Entity.CheckValues());
         return GetDatabase()
-            .Then([&](auto db)
-                  { return DB::Entities::Update(db, _Entity); });
+            .Then(DB::Entities::Update<TEntity>, _Entity);
     }
 
     /// @brief Delete entity from database.
@@ -239,8 +235,7 @@ namespace Booru
     {
         CHECK_RETURN_RESULT_ON_ERROR(_Entity.CheckValidForDelete());
         return GetDatabase()
-            .Then([&](auto db)
-                  { return DB::Entities::Delete(db, _Entity); });
+            .Then(DB::Entities::Delete<TEntity>, _Entity);
     }
 
 } // namespace Booru
