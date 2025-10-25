@@ -12,16 +12,16 @@ namespace Booru::DB::Query
     public:
         Where(StringView const &_A, StringView const &_B, StringView const &_Op) : A{_A}, B{_B}, Op{_Op} {}
 
-        template<class TA, class TB>
+        template <class TA, class TB>
         static Where Equal(TA const &_A, TB const &_B)
         {
-            return Where( String(_A), String(_B), "=="sv );
+            return Where(String(_A), String(_B), "=="sv);
         }
 
-        template<class TA, class TB>
+        template <class TA, class TB>
         static Where In(TA const &_A, TB const &_B)
         {
-            return Where( String(_A), String(_B), "IN"sv );
+            return Where(String(_A), String(_B), "IN"sv);
         }
 
         operator String() const
@@ -45,7 +45,7 @@ namespace Booru::DB::Query
         Query(StringView const &_Table) : Table{_Table} {}
 
         // Tries to prepare the query into a statement.
-        ExpectedOwning<DatabasePreparedStatementInterface> Prepare(DatabaseInterface *_DB) const
+        ExpectedStmt Prepare(DBPtr _DB) const
         {
             if (_DB)
                 return _DB->PrepareStatement(AsString());
@@ -60,17 +60,17 @@ namespace Booru::DB::Query
         }
 
         // Add a where condition.
-        Derived &Where(String const & _Where)
+        Derived &Where(String const &_Where)
         {
-            WhereArgs.push_back( _Where );
+            WhereArgs.push_back(_Where);
             return static_cast<Derived &>(*this);
         }
 
         // Add a key where condition (WHERE key = $key). Bind "$key" in the prepared statement.
         Derived &Key(StringView const &_Key)
         {
-            String keyString { _Key };
-            return Where( Where::Equal( keyString, "$"s + keyString ) );
+            String keyString{_Key};
+            return Where(Where::Equal(keyString, "$"s + keyString));
         }
 
         operator String() const { return AsString(); }
