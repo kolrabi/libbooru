@@ -139,116 +139,104 @@ namespace Booru
     // PostTypes
     // ////////////////////////////////////////////////////////////////////////////////////////////
 
+    /// @brief Get all post types
     ExpectedVector<DB::Entities::PostType> Booru::GetPostTypes()
     {
-        CHECK_VAR_RETURN_RESULT_ON_ERROR(db, GetDatabase());
-        return DB::Entities::GetAll<DB::Entities::PostType>(db.Value);
+        return GetAll<DB::Entities::PostType>();
     }
 
+    /// @brief Get post type by Id
     Expected<DB::Entities::PostType> Booru::GetPostType(DB::INTEGER _Id)
     {
-        CHECK_VAR_RETURN_RESULT_ON_ERROR(db, GetDatabase());
-        return DB::Entities::GetWithKey<DB::Entities::PostType>(db.Value, "Id", _Id);
+        return Get<DB::Entities::PostType>(_Id);
     }
 
+    /// @brief Get post type by name
     Expected<DB::Entities::PostType> Booru::GetPostType(DB::TEXT const &_Name)
     {
-        CHECK_VAR_RETURN_RESULT_ON_ERROR(db, GetDatabase());
-        return DB::Entities::GetWithKey<DB::Entities::PostType>(db.Value, "Name", _Name);
+        return Get<DB::Entities::PostType>("Name"sv, _Name);
     }
 
     // ////////////////////////////////////////////////////////////////////////////////////////////
     // Posts
     // ////////////////////////////////////////////////////////////////////////////////////////////
 
+    /// @brief Get all posts.
     ExpectedVector<DB::Entities::Post> Booru::GetPosts()
     {
-        return GetDatabase()
-            .Then(DB::Entities::GetAll<DB::Entities::Post>);
+        return GetAll<DB::Entities::Post>();
     }
 
+    /// @brief Get post by Id.
     Expected<DB::Entities::Post> Booru::GetPost(DB::INTEGER _Id)
     {
-        return GetDatabase()
-            .Then(DB::Entities::GetWithKey<DB::Entities::Post, DB::INTEGER>, "Id", _Id);
+        return Get<DB::Entities::Post>(_Id);
     }
 
+    /// @brief Get post by hash.
     Expected<DB::Entities::Post> Booru::GetPost(DB::BLOB<16> _MD5)
     {
-        return GetDatabase()
-            .Then(DB::Entities::GetWithKey<DB::Entities::Post, DB::BLOB<16>>, "MD5Sum", _MD5);
+        return Get<DB::Entities::Post>("MD5Sum", _MD5);
     }
 
-    ResultCode Booru::AddTagToPost(DB::INTEGER _PostId, StringView const &_Tag)
+    /// @brief Add a tag by name to a post. Considers negation, redirections and implications.
+    Expected<DB::Entities::Post> Booru::AddTagToPost(DB::Entities::Post const &_Post, DB::Entities::Tag const &_Tag)
     {
-        StringView tagName = _Tag;
-        bool remove = _Tag[0] == '-';
-        if (remove)
+        if (_Post.Id == -1 || _Tag.Id == -1)
         {
-            tagName = tagName.substr(1);
+            return ResultCode::InvalidArgument;
         }
 
-        // find tag
-        CHECK_VAR_RETURN_RESULT_ON_ERROR(tag, GetTag(DB::TEXT(tagName)));
-
-        if (remove)
-            return RemoveTagFromPost(_PostId, tag.Value.Id);
-
-        // follow redirections
-        int iteration = 0;
-        while (tag.Value.RedirectId.has_value())
-        {
-            // TODO: make this a setting
-            if (iteration++ > 32)
-            {
-                return ResultCode::RecursionExceeded;
-            }
-            tag = GetTag(tag.Value.RedirectId.value());
-            CHECK_RETURN_RESULT_ON_ERROR(tag);
-        }
-
+        CHECK_VAR_RETURN_RESULT_ON_ERROR(tag, FollowRedirections(_Tag));
         CHECK_VAR_RETURN_RESULT_ON_ERROR(db, GetDatabase());
-        DB::TransactionGuard transactionGuard(db);
 
-        // actually add tag
-        DB::Entities::PostTag postTag;
-        postTag.PostId = _PostId;
-        postTag.TagId = tag.Value.Id;
-
-        CHECK_RETURN_RESULT_ON_ERROR(Create(postTag));
-
-        // try to honor implications, ignore errors
-        CHECK_VAR_RETURN_RESULT_ON_ERROR(implications, GetTagImplicationsForTag(tag.Value.Id));
-        for (auto const &implication : implications.Value)
         {
-            DB::INTEGER impliedTagId = implication.ImpliedTagId;
-            if (implication.Flags & DB::Entities::TagImplication::FLAG_REMOVE_TAG)
+            DB::TransactionGuard transactionGuard(db);
+
+            // actually add tag
+            DB::Entities::PostTag postTag;
+            postTag.PostId = _Post.Id;
+            postTag.TagId = tag.Value.Id;
+
+            CHECK_RETURN_RESULT_ON_ERROR(Create(postTag));
+
+            // try to honor implications, ignore errors
+            CHECK_VAR_RETURN_RESULT_ON_ERROR(implications, GetTagImplicationsForTag(tag));
+            for (auto const &implication : implications.Value)
             {
-                // might fail if tag has not been added, that's fine, ignore
-                CHECK(RemoveTagFromPost(_PostId, tag.Value.Id));
-            }
-            else
-            {
+                DB::INTEGER impliedTagId = implication.ImpliedTagId;
                 auto impliedTag = GetTag(impliedTagId);
                 CHECK_CONTINUE_ON_ERROR(impliedTag);
 
-                // recurse, added tag may have redirection, implications, ...
-                // might fail if already added, ignore
-                CHECK(AddTagToPost(_PostId, impliedTag.Value.Name.c_str()));
+                if (implication.Flags & DB::Entities::TagImplication::FLAG_REMOVE_TAG)
+                {
+                    // might fail if tag has not been added, that's fine, ignore
+                    CHECK(RemoveTagFromPost(_Post, impliedTag));
+                }
+                else
+                {
+                    // recurse, added tag may have redirection, implications, ...
+                    // might fail if already added, ignore
+                    CHECK(AddTagToPost(_Post, impliedTag));
+                }
             }
-        }
 
-        transactionGuard.Commit();
+            transactionGuard.Commit();
+        }
         return ResultCode::OK;
     }
 
-    ResultCode Booru::RemoveTagFromPost(DB::INTEGER _PostId, DB::INTEGER _TagId)
+    /// @brief Remove a tag by Id from a post .
+    Expected<DB::Entities::Post> Booru::RemoveTagFromPost(DB::Entities::Post const &_Post, DB::Entities::Tag const &_Tag)
     {
-        return FindPostTag(_PostId, _TagId)
-            .Then([this](auto pt)
-                  { return Delete(pt); });
+        return {
+            _Post, FindPostTag(_Post.Id, _Tag.Id)
+                       .Then([this](auto pt)
+                             { return Delete(pt); })
+                       .Code};
     }
 
+    /// @brief Get all posts that match a given query.
     ExpectedVector<DB::Entities::Post> Booru::FindPosts(StringView const &_QueryString)
     {
         StringVector queryStringTokens = Strings::Split(_QueryString);
@@ -271,12 +259,13 @@ namespace Booru
     // PostTags
     // ////////////////////////////////////////////////////////////////////////////////////////////
 
+    /// @brief Get all post/tag associations.
     ExpectedVector<DB::Entities::PostTag> Booru::GetPostTags()
     {
-        return GetDatabase()
-            .Then(DB::Entities::GetAll<DB::Entities::PostTag>);
+        return GetAll<DB::Entities::PostTag>();
     }
 
+    /// @brief Get all tags for a post by Id.
     ExpectedVector<DB::Entities::Tag> Booru::GetTagsForPost(DB::INTEGER _PostId)
     {
         static auto tagIdSubQuery =
@@ -297,6 +286,7 @@ namespace Booru
                   { return s->template ExecuteList<DB::Entities::Tag>(); });
     }
 
+    /// @brief Get all posts for a tag by Id.
     ExpectedVector<DB::Entities::Post> Booru::GetPostsForTag(DB::INTEGER _TagId)
     {
         static auto postIdSubQuery =
@@ -317,11 +307,7 @@ namespace Booru
                   { return s->template ExecuteList<DB::Entities::Post>(); });
     }
 
-    template <class TValue>
-    static inline auto BindValue(DB::StmtPtr _Stmt, StringView const &_Name, TValue const &_Value)
-    {
-        return _Stmt->BindValue(_Name, _Value);
-    }
+    /// @brief Find a post/tag associations.
 
     Expected<DB::Entities::PostTag> Booru::FindPostTag(DB::INTEGER _PostId, DB::INTEGER _TagId)
     {
@@ -345,76 +331,79 @@ namespace Booru
     // PostFiles
     // ////////////////////////////////////////////////////////////////////////////////////////////
 
+    /// @brief Get all post files.
     ExpectedVector<DB::Entities::PostFile> Booru::GetPostFiles()
     {
-        return GetDatabase()
-            .Then(DB::Entities::GetAll<DB::Entities::PostFile>);
+        return GetAll<DB::Entities::PostFile>();
     }
 
+    /// @brief Get all files for a given post by Id.
     ExpectedVector<DB::Entities::PostFile> Booru::GetFilesForPost(DB::INTEGER _PostId)
     {
-        return GetDatabase()
-            .Then(DB::Entities::GetAllWithKey<DB::Entities::PostFile, DB::INTEGER>, "PostId", _PostId);
+        return GetAll<DB::Entities::PostFile>("PostId", _PostId);
     }
 
     // ////////////////////////////////////////////////////////////////////////////////////////////
     // PostSiteId
     // ////////////////////////////////////////////////////////////////////////////////////////////
 
+    /// @brief Get all post site ids.
     ExpectedVector<DB::Entities::PostSiteId> Booru::GetPostSiteIds()
     {
-        return GetDatabase()
-            .Then(DB::Entities::GetAll<DB::Entities::PostSiteId>);
+        return GetAll<DB::Entities::PostSiteId>();
     }
 
+    /// @brief Get all site ids for a given post.
     ExpectedVector<DB::Entities::PostSiteId> Booru::GetPostSiteIdsForPost(DB::INTEGER _PostId)
     {
-        return GetDatabase()
-            .Then([&](auto db)
-                  { return DB::Entities::GetAllWithKey<DB::Entities::PostSiteId>(db, "PostId", _PostId); });
+        return GetAll<DB::Entities::PostSiteId>("PostId", _PostId);
     }
 
     // ////////////////////////////////////////////////////////////////////////////////////////////
     // Sites
     // ////////////////////////////////////////////////////////////////////////////////////////////
 
-    Expected<DB::Entities::Site> Booru::GetSite(DB::INTEGER _Id)
+    /// @brief Get all sites.
+    ExpectedVector<DB::Entities::Site> Booru::GetSites()
     {
-        return GetDatabase()
-            .Then([&](auto db)
-                  { return DB::Entities::GetWithKey<DB::Entities::Site>(db, "Id", _Id); });
+        return GetAll<DB::Entities::Site>();
     }
 
+    /// @brief Get site by id.
+    Expected<DB::Entities::Site> Booru::GetSite(DB::INTEGER _Id)
+    {
+        return Get<DB::Entities::Site>("Id", _Id);
+    }
+
+    /// @brief Get all site by name.
     Expected<DB::Entities::Site> Booru::GetSite(DB::TEXT const &_Name)
     {
-        return GetDatabase()
-            .Then([&](auto db)
-                  { return DB::Entities::GetWithKey<DB::Entities::Site>(db, "Name", _Name); });
+        return Get<DB::Entities::Site>("Name", _Name);
     }
 
     // ////////////////////////////////////////////////////////////////////////////////////////////
     // Tags
     // ////////////////////////////////////////////////////////////////////////////////////////////
 
+    /// @brief Get all tags.
     ExpectedVector<DB::Entities::Tag> Booru::GetTags()
     {
-        return GetDatabase()
-            .Then(DB::Entities::template GetAll<DB::Entities::Tag>);
+        return GetAll<DB::Entities::Tag>();
     }
 
+    /// @brief Get tag by id.
     Expected<DB::Entities::Tag> Booru::GetTag(DB::INTEGER _Id)
     {
-        return GetDatabase()
-            .Then([&](auto db)
-                  { return DB::Entities::GetWithKey<DB::Entities::Tag>(db, "Id", _Id); });
+        return Get<DB::Entities::Tag>("Id", _Id);
     }
 
+    /// @brief Get all tags by name.
     Expected<DB::Entities::Tag> Booru::GetTag(DB::TEXT const &_Name)
     {
-        return GetDatabase()
-            .Then(DB::Entities::GetWithKey<DB::Entities::Tag, DB::TEXT>, "Name", _Name);
+        return Get<DB::Entities::Tag, DB::TEXT>("Name", _Name);
     }
 
+    /// @brief Get all tags that match a given pattern.
     ExpectedVector<DB::Entities::Tag> Booru::MatchTags(StringView const &_Pattern)
     {
         // make a copy
@@ -479,42 +468,60 @@ namespace Booru
                   { return s->template ExecuteList<DB::Entities::Tag>(); });
     }
 
+    /// @brief Follow the redirection of a tag
+    Expected<DB::Entities::Tag> Booru::FollowRedirections(DB::Entities::Tag const &_Tag)
+    {
+        Expected tag = _Tag;
+
+        // follow redirections
+        int iteration = 0;
+        while (tag.Value.RedirectId.has_value())
+        {
+            // TODO: make this a setting
+            if (iteration++ > 32)
+            {
+                return ResultCode::RecursionExceeded;
+            }
+            tag = GetTag(tag.Value.RedirectId.value());
+            CHECK_RETURN_RESULT_ON_ERROR(tag);
+        }
+        return tag;
+    }
+
     // ////////////////////////////////////////////////////////////////////////////////////////////
     // TagImplications
     // ////////////////////////////////////////////////////////////////////////////////////////////
 
     ExpectedVector<DB::Entities::TagImplication> Booru::GetTagImplications()
     {
-        return GetDatabase()
-            .Then(DB::Entities::GetAll<DB::Entities::TagImplication>);
+        return GetAll<DB::Entities::TagImplication>();
     }
 
-    ExpectedVector<DB::Entities::TagImplication> Booru::GetTagImplicationsForTag(DB::INTEGER _TagId)
+    ExpectedVector<DB::Entities::TagImplication> Booru::GetTagImplicationsForTag(DB::Entities::Tag const &_Tag)
     {
-        return GetDatabase()
-            .Then(DB::Entities::GetAllWithKey<DB::Entities::TagImplication, DB::INTEGER>, "TagId", _TagId);
+        return GetAll<DB::Entities::TagImplication>("TagId", _Tag.Id);
     }
 
     // ////////////////////////////////////////////////////////////////////////////////////////////
     // TagTypes
     // ////////////////////////////////////////////////////////////////////////////////////////////
 
+    /// @brief Get all tag types.
     ExpectedVector<DB::Entities::TagType> Booru::GetTagTypes()
     {
-        return GetDatabase()
-            .Then(DB::Entities::GetAll<DB::Entities::TagType>);
+        return GetAll<DB::Entities::TagType>();
     }
 
+    /// @brief Get tag type by Id.
     Expected<DB::Entities::TagType> Booru::GetTagType(DB::INTEGER _Id)
     {
-        return GetDatabase()
-            .Then(DB::Entities::GetWithKey<DB::Entities::TagType, DB::INTEGER>, "Id", _Id);
+        return Get<DB::Entities::TagType>("Id", _Id);
     }
 
+    /// @brief Get tag type by name.
     Expected<DB::Entities::TagType> Booru::GetTagType(DB::TEXT const &_Name)
     {
-        return GetDatabase()
-            .Then(DB::Entities::GetWithKey<DB::Entities::TagType, DB::TEXT>, "Name", _Name);
+        return Get<DB::Entities::TagType>("Name", _Name);
     }
 
     // ////////////////////////////////////////////////////////////////////////////////////////////

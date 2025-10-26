@@ -81,13 +81,19 @@ namespace Booru
         {
             if (ResultIsError(Code))
                 return {Code};
-            return _Callable(Value, args...);
+            return _Callable(std::move(Value), args...);
         }
 
         Expected OnError(auto _Callable)
         {
             if (ResultIsError(Code))
                 _Callable(Code);
+            return std::move(*this);
+        }
+
+        Expected Update(TValue &_Value)
+        {
+            _Value = Value;
             return std::move(*this);
         }
 

@@ -31,6 +31,7 @@ target_sources(
             include/booru/common.hh
             include/booru/db.hh
             include/booru/db/visitors.hh
+            include/booru/db/entities.hh
             include/booru/db/entity.hh
             include/booru/db/entities/post_file.hh
             include/booru/db/entities/post_site_id.hh

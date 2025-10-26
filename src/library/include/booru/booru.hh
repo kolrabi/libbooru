@@ -1,7 +1,6 @@
 #pragma once
 
-#include <booru/db/entity.hh>
-#include <booru/common.hh>
+#include <booru/db/entities.hh>
 
 namespace Booru
 {
@@ -56,115 +55,97 @@ namespace Booru
 
         /// @brief Create a new entity in database.
         template <class TEntity>
-        ResultCode Create(TEntity &_Entity);
+        Expected<TEntity> Create(TEntity &_Entity);
+
+        /// @brief Get all entities
+        template <class TEntity>
+        ExpectedVector<TEntity> GetAll();
+
+        /// @brief Get all matching entities
+        template <class TEntity, class TKey>
+        ExpectedVector<TEntity> GetAll(StringView const &_Key, TKey const &_Value);
+
+        /// @brief Get one matching entities
+        template <class TEntity>
+        Expected<TEntity> Get(DB::INTEGER _Id);
+
+        /// @brief Get one matching entities
+        template <class TEntity, class TKey>
+        Expected<TEntity> Get(StringView const &_Key, TKey const &_Value);
 
         /// @brief Update an new entity in database.
         template <class TEntity>
-        ResultCode Update(TEntity &_Entity);
+        Expected<TEntity> Update(TEntity &_Entity);
 
         /// @brief Delete entity from database.
         template <class TEntity>
-        ResultCode Delete(TEntity &_Entity);
+        Expected<TEntity> Delete(TEntity &_Entity);
 
         // ////////////////////////////////////////////////////////////////////////////////////////////
         // PostTypes
         // ////////////////////////////////////////////////////////////////////////////////////////////
 
-        /// @brief Get all post types
         ExpectedVector<DB::Entities::PostType> GetPostTypes();
-
-        /// @brief Get post type by Id
         Expected<DB::Entities::PostType> GetPostType(DB::INTEGER _Id);
-
-        /// @brief Get post type by name
         Expected<DB::Entities::PostType> GetPostType(DB::TEXT const &_Name);
 
         // ////////////////////////////////////////////////////////////////////////////////////////////
         // Posts
         // ////////////////////////////////////////////////////////////////////////////////////////////
 
-        /// @brief Get all posts.
         ExpectedVector<DB::Entities::Post> GetPosts();
-
-        /// @brief Get post by Id.
         Expected<DB::Entities::Post> GetPost(DB::INTEGER _Id);
-
-        /// @brief Get post by hash.
         Expected<DB::Entities::Post> GetPost(DB::BLOB<16> _Id);
-
-        /// @brief Add a tag by name to a post. Considers negation, redirections and implications.
-        ResultCode AddTagToPost(DB::INTEGER _PostId, StringView const &_Tag);
-
-        /// @brief Remove a tag by Id from a post .
-        ResultCode RemoveTagFromPost(DB::INTEGER _PostId, DB::INTEGER _Tag);
-
-        /// @brief Get all posts that match a given query.
+        Expected<DB::Entities::Post> AddTagToPost(DB::Entities::Post const &_Post, DB::Entities::Tag const &_TagId);
+        Expected<DB::Entities::Post> RemoveTagFromPost(DB::Entities::Post const &_Post, DB::Entities::Tag const &_Tag);
         ExpectedVector<DB::Entities::Post> FindPosts(StringView const &_QueryString);
 
         // ////////////////////////////////////////////////////////////////////////////////////////////
         // PostTags
         // ////////////////////////////////////////////////////////////////////////////////////////////
 
-        /// @brief Get all post/tag associations.
         ExpectedVector<DB::Entities::PostTag> GetPostTags();
-
-        /// @brief Get all tags for a post by Id.
         ExpectedVector<DB::Entities::Tag> GetTagsForPost(DB::INTEGER _PostId);
-
-        /// @brief Get all posts for a tag by Id.
         ExpectedVector<DB::Entities::Post> GetPostsForTag(DB::INTEGER _TagId);
-
-        /// @brief Find a post/tag associations.
         Expected<DB::Entities::PostTag> FindPostTag(DB::INTEGER _PostId, DB::INTEGER _Tag);
 
         // ////////////////////////////////////////////////////////////////////////////////////////////
         // PostFiles
         // ////////////////////////////////////////////////////////////////////////////////////////////
 
-        /// @brief Get all post files.
         ExpectedVector<DB::Entities::PostFile> GetPostFiles();
-
-        /// @brief Get all files for a given post by Id.
         ExpectedVector<DB::Entities::PostFile> GetFilesForPost(DB::INTEGER _PostId);
+
+        // TODO: AddFileToPost
+        // TODO: GetPostForFile
 
         // ////////////////////////////////////////////////////////////////////////////////////////////
         // PostSiteId
         // ////////////////////////////////////////////////////////////////////////////////////////////
 
-        /// @brief Get all post site ids.
         ExpectedVector<DB::Entities::PostSiteId> GetPostSiteIds();
-
-        /// @brief Get all site ids for a given post.
         ExpectedVector<DB::Entities::PostSiteId> GetPostSiteIdsForPost(DB::INTEGER _PostId);
+
+        // TODO: GetPostsForSiteId
+        // TODO: AddSiteIdToPost
 
         // ////////////////////////////////////////////////////////////////////////////////////////////
         // Sites
         // ////////////////////////////////////////////////////////////////////////////////////////////
 
-        /// @brief Get all sites.
-        // TODO: GetSites();
-
-        /// @brief Get all site by id.
+        ExpectedVector<DB::Entities::Site> GetSites();
         Expected<DB::Entities::Site> GetSite(DB::INTEGER _Id);
-
-        /// @brief Get all site by name.
         Expected<DB::Entities::Site> GetSite(DB::TEXT const &_Name);
 
         // ////////////////////////////////////////////////////////////////////////////////////////////
         // Tags
         // ////////////////////////////////////////////////////////////////////////////////////////////
 
-        /// @brief Get all tags.
         ExpectedVector<DB::Entities::Tag> GetTags();
-
-        /// @brief Get tag by id.
         Expected<DB::Entities::Tag> GetTag(DB::INTEGER _Id);
-
-        /// @brief Get all tags by name.
         Expected<DB::Entities::Tag> GetTag(DB::TEXT const &_Name);
-
-        /// @brief Get all tags that match a given pattern.
         ExpectedVector<DB::Entities::Tag> MatchTags(StringView const &_Pattern);
+        Expected<DB::Entities::Tag> FollowRedirections(DB::Entities::Tag const &_Tag);
 
         // ////////////////////////////////////////////////////////////////////////////////////////////
         // TagImplications
@@ -174,19 +155,18 @@ namespace Booru
         ExpectedVector<DB::Entities::TagImplication> GetTagImplications();
 
         /// @brief Get tag implication by tag id.
-        ExpectedVector<DB::Entities::TagImplication> GetTagImplicationsForTag(DB::INTEGER _TagId);
+        ExpectedVector<DB::Entities::TagImplication> GetTagImplicationsForTag(DB::Entities::Tag const &_TagId);
+
+        // TODO: AddPositiveImplicationToTag(Tag, Tag)
+        // TODO: AddNegativeImplicationToTag(Tag, Tag)
+        // TODO: RemoveImplicationFromTag(Tag, Tag)
 
         // ////////////////////////////////////////////////////////////////////////////////////////////
         // TagTypes
         // ////////////////////////////////////////////////////////////////////////////////////////////
 
-        /// @brief Get all tag types.
         ExpectedVector<DB::Entities::TagType> GetTagTypes();
-
-        /// @brief Get tag type by Id.
         Expected<DB::Entities::TagType> GetTagType(DB::INTEGER _Id);
-
-        /// @brief Get tag type by name.
         Expected<DB::Entities::TagType> GetTagType(DB::TEXT const &_Name);
 
         // ////////////////////////////////////////////////////////////////////////////////////////////
@@ -211,17 +191,48 @@ namespace Booru
     };
 
     template <class TEntity>
-    ResultCode Booru::Create(TEntity &_Entity)
+    inline Expected<TEntity> Booru::Create(TEntity &_Entity)
     {
         CHECK_RETURN_RESULT_ON_ERROR(_Entity.CheckValidForCreate());
         CHECK_RETURN_RESULT_ON_ERROR(_Entity.CheckValues());
+        LOG_WARNING("Booru::Create entity pre: {}", _Entity.Id);
+        auto result = GetDatabase()
+                          .Then(DB::Entities::Create<TEntity>, _Entity);
+        LOG_WARNING("Booru::Create entity psot: {} {}", _Entity.Id, result.Value.Id);
+        return result;
+    }
+
+    template <class TEntity>
+    inline ExpectedVector<TEntity> Booru::GetAll()
+    {
         return GetDatabase()
-            .Then(DB::Entities::Create<TEntity>, _Entity);
+            .Then(DB::Entities::GetAll<TEntity>);
+    }
+
+    template <class TEntity, class TKey>
+    inline ExpectedVector<TEntity> Booru::GetAll(StringView const &_Key, TKey const &_Value)
+    {
+        return GetDatabase()
+            .Then(DB::Entities::GetAllWithKey<TEntity, TKey>, _Key, _Value);
+    }
+
+    template <class TEntity>
+    inline Expected<TEntity> Booru::Get(DB::INTEGER _Id)
+    {
+        return GetDatabase()
+            .Then(DB::Entities::GetWithKey<TEntity, DB::INTEGER>, "Id", _Id);
+    }
+
+    template <class TEntity, class TKey>
+    inline Expected<TEntity> Booru::Get(StringView const &_Key, TKey const &_Value)
+    {
+        return GetDatabase()
+            .Then(DB::Entities::GetWithKey<TEntity, TKey>, _Key, _Value);
     }
 
     /// @brief Update an new entity in database.
     template <class TEntity>
-    ResultCode Booru::Update(TEntity &_Entity)
+    inline Expected<TEntity> Booru::Update(TEntity &_Entity)
     {
         CHECK_RETURN_RESULT_ON_ERROR(_Entity.CheckValidForUpdate());
         CHECK_RETURN_RESULT_ON_ERROR(_Entity.CheckValues());
@@ -231,7 +242,7 @@ namespace Booru
 
     /// @brief Delete entity from database.
     template <class TEntity>
-    ResultCode Booru::Delete(TEntity &_Entity)
+    Expected<TEntity> Booru::Delete(TEntity &_Entity)
     {
         CHECK_RETURN_RESULT_ON_ERROR(_Entity.CheckValidForDelete());
         return GetDatabase()

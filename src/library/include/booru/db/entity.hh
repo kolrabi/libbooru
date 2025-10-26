@@ -2,7 +2,6 @@
 
 #include <booru/db.hh>
 #include <booru/db/query.hh>
-#include <booru/db/visitors.hh>
 
 namespace Booru::DB::Entities
 {
@@ -88,7 +87,7 @@ namespace Booru::DB::Entities
 
     /// @brief Create a new entity in the database using values from the provided entity.
     template <class TEntity>
-    ResultCode Create(DBPtr _DB, TEntity &_Entity)
+    Expected<TEntity> Create(DBPtr _DB, TEntity &_Entity)
     {
         CHECK_RETURN_RESULT_ON_ERROR(_Entity.CheckValidForCreate());
         CHECK_VAR_RETURN_RESULT_ON_ERROR(stmt, DB::Query::InsertEntity<TEntity>(TEntity::Table, _Entity).Prepare(_DB));
@@ -96,7 +95,9 @@ namespace Booru::DB::Entities
         CHECK_RETURN_RESULT_ON_ERROR(stmt.Value->Step());
         return _DB->GetLastRowId()
             .Then([&](DB::INTEGER id)
-                  { _Entity.Id = id; return ResultCode::CreatedOK; });
+                  { auto entity = _Entity;
+                    entity.Id = id;
+                    return Expected(entity, ResultCode::CreatedOK); });
     }
 
     /// @brief Try to retrieve a single entity from the database matching the given key in the given column. Only one entity will be returned. If no entity is found, an error will be returned.
@@ -130,56 +131,25 @@ namespace Booru::DB::Entities
 
     /// @brief Update the values of an entity in the database. The entity must have a valid ID set or an error code will be returned.
     template <class TEntity>
-    ResultCode Update(DBPtr _DB, TEntity &_Entity)
+    Expected<TEntity> Update(DBPtr _DB, TEntity &_Entity)
     {
         auto stmt = DB::Query::UpdateEntity(TEntity::Table, _Entity).Key("Id").Prepare(_DB);
         CHECK_RETURN_RESULT_ON_ERROR(stmt.Code);
         CHECK_RETURN_RESULT_ON_ERROR(StoreEntity(_Entity, stmt.Value.get()));
         CHECK_RETURN_RESULT_ON_ERROR(stmt.Value->BindValue("Id", _Entity.Id));
-        return stmt.Value->Step(true);
+        return {_Entity, stmt.Value->Step(true)};
     }
 
     /// @brief Delete an entity from the database. The entity must have a valid ID set.
     template <class TEntity>
-    static ResultCode Delete(DBPtr _DB, TEntity &_Entity)
+    Expected<TEntity> Delete(DBPtr _DB, TEntity &_Entity)
     {
         auto stmt = DB::Query::Delete(TEntity::Table).Key("Id").Prepare(_DB);
         CHECK_RETURN_RESULT_ON_ERROR(stmt.Code);
         CHECK_RETURN_RESULT_ON_ERROR(stmt.Value->BindValue("Id", _Entity.Id));
         CHECK_RETURN_RESULT_ON_ERROR(stmt.Value->Step(true));
         _Entity.Id = -1;
-        return ResultCode::OK;
-    }
-
-    // forward declaration of entities
-
-    struct PostFile;
-    struct PostSiteId;
-    struct PostTag;
-    struct PostType;
-    struct Post;
-    struct Site;
-    struct TagImplication;
-    struct TagType;
-    struct Tag;
-
-    // A post can be suited for different audiences, such as adults or children. The rating of a post can be used to determine whether it should be displayed.
-    enum
-    {
-        RATING_UNRATED = 0,
-        RATING_GENERAL = 1,
-        RATING_SENSITIVE = 2,
-        RATING_QUESTIONABLE = 3,
-        RATING_EXPLICIT = 4
-    };
-
-    /// (Debug tool) Convert an entity to a printable string.
-    template <class TEntity>
-    static inline String EntityToString(TEntity const &_Item)
-    {
-        Visitors::ToStringPropertyVisitor Visitor;
-        auto result = const_cast<TEntity &>(_Item).IterateProperties(Visitor);
-        return Visitor.m_String;
+        return _Entity;
     }
 
 } // namespace Booru::DB::Entities
