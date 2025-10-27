@@ -4,9 +4,9 @@
 namespace Booru
 {
 
-ResultCode Sqlite3ToResult( int _RC )
+ResultCode Sqlite3ToResult(int _RC)
 {
-    switch ( _RC )
+    switch (_RC)
     {
     case SQLITE_OK:
         return ResultCode::OK;
@@ -28,4 +28,4 @@ ResultCode Sqlite3ToResult( int _RC )
     return ResultCode::DatabaseError;
 }
 
-}
+} // namespace Booru

@@ -2,14 +2,11 @@
 
 namespace Booru
 {
-    int64_t SQLGetSchemaVersion()
-    {
-        return 1ll;
-    }
+int64_t SQLGetSchemaVersion() { return 1ll; }
 
-    StringView SQLGetBaseSchema()
-    {
-        return R"SQL(
+StringView SQLGetBaseSchema()
+{
+    return R"SQL(
     -- -----------------------------------------------------------------------------
 
     PRAGMA foreign_keys = ON;
@@ -190,17 +187,18 @@ namespace Booru
 
 
         )SQL"sv;
-    }
+}
 
-    StringView SQLGetUpdateSchema( int64_t _Version )
+StringView SQLGetUpdateSchema(int64_t _Version)
+{
+    switch (_Version)
     {
-        switch( _Version )
-        {
-            case 0: return R"SQL(
+    case 0:
+        return R"SQL(
                 UPDATE CONFIG SET Value = 1 WHERE Name == "db.version";
             )SQL"sv;
-        }
-        return ""sv;
     }
-
+    return ""sv;
 }
+
+} // namespace Booru

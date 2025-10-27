@@ -6,25 +6,23 @@
 namespace Booru::DB
 {
 
-    // forward declarations
+// forward declarations
 
-    class DatabaseInterface;
-    using DBPtr = Shared<DatabaseInterface>;
-    using ExpectedDB = Expected<DBPtr>;
+class IBackend;
+using DBPtr      = Shared<IBackend>;
+using ExpectedDB = Expected<DBPtr>;
 
-    class DatabasePreparedStatementInterface;
-    using StmtPtr = Shared<DatabasePreparedStatementInterface>;
-    using ExpectedStmt = Expected<StmtPtr>;
+class IStmt;
+using StmtPtr                          = Shared<IStmt>;
+using ExpectedStmt                     = Expected<StmtPtr>;
 
-    // type aliases
+// type aliases
 
-    using INTEGER = int64_t;
-    using TEXT = String;
-    using FLOAT = double;
-    template <int N>
-    using BLOB = ByteArray<N>;
-    template <class TValue>
-    using NULLABLE = Optional<TValue>;
-    using MD5BLOB = MD5Sum;
+using INTEGER                          = int64_t;
+using TEXT                             = String;
+using FLOAT                            = double;
+template <int N> using BLOB            = ByteArray<N>;
+template <class TValue> using NULLABLE = Optional<TValue>;
+using MD5BLOB                          = MD5Sum;
 
-}
+} // namespace Booru::DB

@@ -86,5 +86,17 @@
     },
     "cmake.configureArgs": [
         "-DCODE_COVERAGE=ON"
-    ]
+    ],
+    "sqltools.useNodeRuntime": true,
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "name": "test",
+            "database": "build/test.db"
+        }
+    ],
+    "c-cpp-flylint.clang.warnings": [
+        "no-pragma-once-outside-header"
+    ],
 }

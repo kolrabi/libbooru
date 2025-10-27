@@ -5,20 +5,19 @@
 namespace Booru::DB::Entities
 {
 
-struct Site : public Entity<Site>
+struct Site : public Entity
 {
-    static char const constexpr* Table = "Sites";
-    static char const constexpr* LOGGER = "booru.db.entites.sites";
+    static auto constexpr Table  = "Sites";
+    static auto constexpr LOGGER = "booru.db.entites.sites";
 
     TEXT Name;
     TEXT Description;
 
-    template <class Visitor>
-    ResultCode IterateProperties( Visitor & _Visitor )
+    template <class Visitor> ResultCode IterateProperties(Visitor& _Visitor)
     {
-        ENTITY_PROPERTY_KEY( Id );
-        ENTITY_PROPERTY( Name );
-        ENTITY_PROPERTY( Description );
+        ENTITY_PROPERTY_KEY(Id);
+        ENTITY_PROPERTY(Name);
+        ENTITY_PROPERTY(Description);
         return ResultCode::OK;
     }
 };

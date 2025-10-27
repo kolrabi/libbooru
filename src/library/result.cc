@@ -1,10 +1,11 @@
 #include <booru/result.hh>
 
-namespace Booru {
-
-char const* ResultToString( ResultCode _Code )
+namespace Booru
 {
-    switch ( _Code )
+
+char const* ResultToString(ResultCode _Code)
+{
+    switch (_Code)
     {
     case ResultCode::Undefined:
         return "Undefined Error";
@@ -64,9 +65,9 @@ char const* ResultToString( ResultCode _Code )
     }
 }
 
-char const* ResultToDescription( ResultCode _Code )
+char const* ResultToDescription(ResultCode _Code)
 {
-    switch ( _Code )
+    switch (_Code)
     {
     case ResultCode::Undefined:
         return "No result code was specified";
@@ -120,11 +121,12 @@ char const* ResultToDescription( ResultCode _Code )
     case ResultCode::DatabaseRangeError:
         return "Database library function parameter was out of range";
     case ResultCode::DatabaseConstraintViolation:
-        return "Statement would violate a constraint. Either a primary key already exists or a required foreign key doesn't.";
+        return "Statement would violate a constraint. Either a primary key "
+               "already exists or a required foreign key doesn't.";
 
     default:
         return "Unknown Result Code";
     }
 }
 
-}
+} // namespace Booru

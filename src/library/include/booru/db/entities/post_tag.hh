@@ -1,23 +1,23 @@
 #pragma once
 
-#include <booru/db/entity.hh>
+#include <booru/db/entities.hh>
+
 namespace Booru::DB::Entities
 {
 
-struct PostTag : public Entity<PostTag>
+struct PostTag : public Entity
 {
-    static char const constexpr* Table = "PostTags";
-    static char const constexpr* LOGGER = "booru.db.entites.posttags";
+    static auto constexpr Table  = "PostTags";
+    static auto constexpr LOGGER = "booru.db.entites.posttags";
 
-    INTEGER PostId = -1;
-    INTEGER TagId  = -1;
+    INTEGER PostId               = -1;
+    INTEGER TagId                = -1;
 
-    template <class Visitor>
-    ResultCode IterateProperties( Visitor & _Visitor )
+    template <class Visitor> ResultCode IterateProperties(Visitor& _Visitor)
     {
-        ENTITY_PROPERTY_KEY( Id );
-        ENTITY_PROPERTY( PostId );
-        ENTITY_PROPERTY( TagId );
+        ENTITY_PROPERTY_KEY(Id);
+        ENTITY_PROPERTY(PostId);
+        ENTITY_PROPERTY(TagId);
         return ResultCode::OK;
     }
 };
