@@ -32,7 +32,8 @@ class DatabasePreparedStatementSqlite3 : public IStmt
     bool ColumnIsNull(int _Index) override;
 
     Expected<int> GetColumnIndex(StringView const& _Name) override;
-    ExpectedStmt Step(bool _NeedRow = false) override;
+    ExpectedStmt StepQuery(bool _NeedRow = false) override;
+    ExpectedStmt StepUpdate(bool _NeedRow = false) override;
 
   private:
     sqlite3_stmt* m_Handle;

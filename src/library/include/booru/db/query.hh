@@ -48,7 +48,9 @@ template <class Derived> class Query
     // Tries to prepare the query into a statement.
     ExpectedStmt Prepare(DBPtr _DB) const
     {
-        if (_DB) return _DB->PrepareStatement(AsString());
+        auto queryString = AsString();
+        LOG_DEBUG("Preparing query: {}", queryString);
+        if (_DB) return _DB->PrepareStatement(queryString);
         return ResultCode::InvalidArgument;
     }
 

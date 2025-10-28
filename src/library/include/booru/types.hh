@@ -58,7 +58,7 @@ static inline Shared<TValue> MakeShared(Args&&... args)
 
 template <class TIterable>
 concept CConstIterable =
-    requires(TIterable const& value) { std::begin(value)++; };
+    requires(TIterable const& value) { std::begin(value); };
 
 template <class TIterable, class TValue>
 concept CTypedConstIterable = requires {

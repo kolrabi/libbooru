@@ -8,7 +8,6 @@ namespace Booru::DB::Entities
 
 // forward declaration of entities
 struct PostFile;
-struct PostSiteId;
 struct PostTag;
 struct PostType;
 struct Post;

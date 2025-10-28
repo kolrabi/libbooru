@@ -34,7 +34,6 @@ target_sources(
             include/booru/db/entities.hh
             include/booru/db/entity.hh
             include/booru/db/entities/post_file.hh
-            include/booru/db/entities/post_site_id.hh
             include/booru/db/entities/post_tag.hh
             include/booru/db/entities/post_type.hh
             include/booru/db/entities/post.hh
@@ -61,7 +60,7 @@ endif()
 set_target_properties( 
     booru 
     PROPERTIES 
-        CXX_STANDARD 20
+        CXX_STANDARD 23
         VERSION ${PROJECT_VERSION} 
         SOVERSION ${PROJECT_VERSION_MAJOR}
         COMPILE_WARNING_AS_ERROR ON

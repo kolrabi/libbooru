@@ -51,6 +51,8 @@ static inline String ToString(CTypedConstIterable<Byte> auto const& _Data)
 namespace Strings
 {
 
+static constexpr auto LOGGER = "booru.strings";
+
 /// @brief Splits a string based on a delimiter into a vector of strings.
 /// @param _Str String to split.
 /// @param _Delim Delimiter on which to split. Default is space.
@@ -89,10 +91,42 @@ String Join(CTypedConstIterable<String> auto const& _Items,
     return str;
 }
 
+String ConvertC32ToUTF8(char32_t _Ch32);
+String ConvertC32ToUTF8(std::u32string_view const& _Str32);
+String ParseHTMLEntity(StringView const& _entity);
+
+String Replace(StringView const& _Str, StringView const& _Pattern,
+               StringView const& _Replace);
+
 /// @brief Parse a hexadecimal string into a byte array.
 /// @param _Hex Hexadecimal string to parse.
 /// @return A vector containing the bytes from the string, or an error code.
 Expected<ByteVector> ParseHex(StringView const& _Hex);
+
+template <size_t N> Expected<ByteArray<N>> ParseHexArray(StringView const& _Hex)
+{
+    CHECK_VAR_RETURN_RESULT_ON_ERROR(bytes, ParseHex(_Hex));
+    if (bytes.Value.size() > N) return ResultCode::ArgumentTooLong;
+    if (bytes.Value.size() < N) return ResultCode::ArgumentTooShort;
+
+    ByteArray<N> result;
+    std::ranges::copy_n(std::begin(bytes.Value), N, std::begin(result));
+    return result;
+}
+
+Expected<ByteVector> ParseBase64(StringView const& _Base64);
+
+template <size_t N>
+Expected<ByteArray<N>> ParseBase64Array(StringView const& _Base64)
+{
+    CHECK_VAR_RETURN_RESULT_ON_ERROR(bytes, ParseBase64(_Base64));
+    if (bytes.Value.size() > N) return ResultCode::ArgumentTooLong;
+    if (bytes.Value.size() < N) return ResultCode::ArgumentTooShort;
+
+    ByteArray<N> result;
+    std::ranges::copy_n(std::begin(bytes.Value), N, std::begin(result));
+    return result;
+}
 
 /// @brief Operator for std::transform to create a String from a value.
 template <class TValue> struct XFormFrom

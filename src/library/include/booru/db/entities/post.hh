@@ -16,15 +16,14 @@ struct Post : public Entity
     };
 
     MD5BLOB MD5Sum;
-    INTEGER Flags       = 0;
-    INTEGER PostTypeId  = -1;
-    INTEGER Rating      = RATING_UNRATED;
-    INTEGER Score       = 0;
-    INTEGER Height      = 0;
-    INTEGER Width       = 0;
-    INTEGER AddedTime   = 0;
-    INTEGER UpdatedTime = 0;
-    TEXT OriginalFileName;
+    INTEGER Flags      = 0;
+    INTEGER PostTypeId = -1;
+    TEXT MimeType      = "application/octet-stream";
+    INTEGER Rating     = RATING_UNRATED;
+    INTEGER Score      = 0;
+    INTEGER Height     = 0;
+    INTEGER Width      = 0;
+    INTEGER AddedTime  = 0;
 
     template <class Visitor> ResultCode IterateProperties(Visitor& _Visitor)
     {
@@ -32,13 +31,12 @@ struct Post : public Entity
         ENTITY_PROPERTY(MD5Sum);
         ENTITY_PROPERTY(Flags);
         ENTITY_PROPERTY(PostTypeId);
+        ENTITY_PROPERTY(MimeType);
         ENTITY_PROPERTY(Rating);
         ENTITY_PROPERTY(Score);
         ENTITY_PROPERTY(Height);
         ENTITY_PROPERTY(Width);
         ENTITY_PROPERTY(AddedTime);
-        ENTITY_PROPERTY(UpdatedTime);
-        ENTITY_PROPERTY(OriginalFileName);
         return ResultCode::OK;
     }
 };

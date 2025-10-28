@@ -7,4 +7,4 @@ namespace Booru
 
 ResultCode Sqlite3ToResult(int _RC);
 
-}
+} // namespace Booru

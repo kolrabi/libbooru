@@ -81,7 +81,7 @@ template <class TEntity> Expected<TEntity> Create(DBPtr _DB, TEntity& _Entity)
     return DB::Query::InsertEntity<TEntity>(TEntity::Table, _Entity)
         .Prepare(_DB)
         .Then(&Store<TEntity>, _Entity)
-        .Then(&IStmt::Step, true)
+        .Then(&IStmt::StepUpdate, true)
         .Then(
             [&](auto s)
             {
@@ -140,7 +140,7 @@ template <class TEntity> Expected<TEntity> Update(DBPtr _DB, TEntity& _Entity)
         .Prepare(_DB)
         .Then(&Store<TEntity>, _Entity)
         .Then(IStmt::BindValueFn<DB::INTEGER>(), "Id", _Entity.Id)
-        .Then(&IStmt::Step, true)
+        .Then(&IStmt::StepUpdate, true)
         .ThenValue(_Entity);
 }
 
@@ -154,7 +154,7 @@ template <class TEntity> Expected<TEntity> Delete(DBPtr _DB, TEntity& _Entity)
         .Key("Id")
         .Prepare(_DB)
         .Then(IStmt::BindValueFn<DB::INTEGER>(), "Id", _Entity.Id)
-        .Then(&IStmt::Step, true)
+        .Then(&IStmt::StepUpdate, true)
         .Then(
             [&](auto s)
             {

@@ -59,6 +59,12 @@ char const* ResultToString(ResultCode _Code)
         return "Database Range Error";
     case ResultCode::DatabaseConstraintViolation:
         return "Database Constraint Violation";
+    case ResultCode::DatabaseFKeyViolation:
+        return "Database Foreign Key Violation";
+    case ResultCode::DatabasePKeyViolation:
+        return "Database Primary Key Violation";
+    case ResultCode::DatabaseNotNullViolation:
+        return "Database NOT NULL Violation";
 
     default:
         return "Unknown Result Code";
@@ -123,6 +129,12 @@ char const* ResultToDescription(ResultCode _Code)
     case ResultCode::DatabaseConstraintViolation:
         return "Statement would violate a constraint. Either a primary key "
                "already exists or a required foreign key doesn't.";
+    case ResultCode::DatabaseFKeyViolation:
+        return "Referenced foreign key does not exist";
+    case ResultCode::DatabasePKeyViolation:
+        return "Primary Key already exists";
+    case ResultCode::DatabaseNotNullViolation:
+        return "Column value was NULL but column was defined as NOT NULL";
 
     default:
         return "Unknown Result Code";

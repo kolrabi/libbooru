@@ -9,10 +9,21 @@ StringView SQLGetBaseSchema()
     return R"SQL(
     -- -----------------------------------------------------------------------------
 
-    PRAGMA foreign_keys = ON;
+    PRAGMA foreign_keys = OFF;
+
+    -- tabula rasa
+    DROP TABLE IF EXISTS Config;
+
+    DROP TABLE IF EXISTS PostTags;
+    DROP TABLE IF EXISTS PostFiles;
+    DROP TABLE IF EXISTS Posts;
+    DROP TABLE IF EXISTS PostTypes;
+
+    DROP TABLE IF EXISTS Tags;
+    DROP TABLE IF EXISTS TagTypes;
+    DROP TABLE IF EXISTS Sites;
 
     -- table containing per database application preference variables
-    DROP TABLE IF EXISTS Config;
     CREATE TABLE Config
     (
         Name        VARCHAR(32) PRIMARY KEY     NOT NULL,
@@ -23,7 +34,6 @@ StringView SQLGetBaseSchema()
 
 
     -- post types
-    DROP TABLE IF EXISTS PostTypes;
     CREATE TABLE IF NOT EXISTS PostTypes
     (
         Id              INTEGER     PRIMARY KEY   NOT NULL,
@@ -31,6 +41,7 @@ StringView SQLGetBaseSchema()
         Description     TEXT                      NOT NULL DEFAULT ""
     );
 
+    INSERT OR IGNORE INTO PostTypes (Name, Description) VALUES("unknown", "Unspecified or unknown...");
     INSERT OR IGNORE INTO PostTypes (Name, Description) VALUES("image", "A simple image file. jpg/png/...");
     INSERT OR IGNORE INTO PostTypes (Name, Description) VALUES("animation", "An animated image file. Animated gif, apng, ...");
     INSERT OR IGNORE INTO PostTypes (Name, Description) VALUES("archive", "A file archive containing images. zip/rar/cbr/...");
@@ -45,6 +56,7 @@ StringView SQLGetBaseSchema()
         Flags               INTEGER                     NOT NULL DEFAULT 0,
             -- 1: flagged for deletion
         PostTypeId          INTEGER                     NOT NULL DEFAULT -1, -- new
+        MimeType            TEXT                        NOT NULL DEFAULT "application/octet-stream",
         Rating              INTEGER                     NOT NULL DEFAULT 0,
             -- 0: unrated
             -- 1: general
@@ -67,22 +79,6 @@ StringView SQLGetBaseSchema()
 
 
 
-    -- file information for each post
-    CREATE TABLE IF NOT EXISTS PostFiles
-    (
-        Id              INTEGER     PRIMARY KEY   NOT NULL,
-        Path            TEXT                      NOT NULL,
-        PostId          INTEGER                   NOT NULL,
-
-        FOREIGN KEY     (PostId)                  REFERENCES      Posts(Id)         ON DELETE CASCADE,
-        UNIQUE          (Path)
-    );
-
-    CREATE INDEX IF NOT EXISTS I_PostFiles_PostId ON PostFiles(PostId);
-    CREATE INDEX IF NOT EXISTS I_PostFiles_Path ON PostFiles(Path);
-
-
-
     -- information about each tag type
     CREATE TABLE IF NOT EXISTS TagTypes
     (
@@ -94,7 +90,7 @@ StringView SQLGetBaseSchema()
         UNIQUE          (Name)
     );
 
-    INSERT OR IGNORE INTO TagTypes (Name, Description) VALUES("Normal", "");
+    INSERT OR IGNORE INTO TagTypes (Name, Description) VALUES("Normal", "Catch all for general tags");
     INSERT OR IGNORE INTO TagTypes (Name, Description) VALUES("Copyright", "Series/movie/comic/etc... a post is inspired by");
     INSERT OR IGNORE INTO TagTypes (Name, Description) VALUES("Character", "A characater that is featured in the post");
     INSERT OR IGNORE INTO TagTypes (Name, Description) VALUES("Artist", "Creator of the post");
@@ -166,27 +162,37 @@ StringView SQLGetBaseSchema()
     (
         Id              INTEGER     PRIMARY KEY   NOT NULL,
         Name            VARCHAR(32)               NOT NULL,
-        Description     TEXT                      NOT NULL DEFAULT ""
+        Description     TEXT                      NOT NULL DEFAULT "",
 
-        -- TODO: additional stuff like api information
+        -- TODO: additional stuff like api information, id -> url
+
+        UNIQUE          (Name)
     );
 
-    -- associations between posts and other booru ids
-    CREATE TABLE IF NOT EXISTS PostSiteIds
+    CREATE INDEX IF NOT EXISTS I_Sites_Name ON Sites(Name);
+
+    INSERT OR IGNORE INTO Sites (Id, Name, Description) VALUES(1, "file", "Local file");
+
+
+    -- file information for each post
+    CREATE TABLE IF NOT EXISTS PostFiles
     (
-        Id              INTEGER     PRIMARY KEY   NOT NULL,
-        PostId          INTEGER                   NOT NULL,
-        SiteId          INTEGER                   NOT NULL,
-        SitePostId      INTEGER                   NOT NULL,
+        Id              INTEGER     PRIMARY KEY     NOT NULL,
+        PostId          INTEGER                     NOT NULL,
+        SiteId          INTEGER                     NOT NULL DEFAULT 1, -- file
+        Path            TEXT                        NOT NULL, -- store url: "file://path/image.jpg", "gelbooru://id"
 
-        FOREIGN KEY     (PostId)                  REFERENCES Posts(Id)              ON DELETE CASCADE,
-        FOREIGN KEY     (SiteId)                  REFERENCES Sites(Id)              ON DELETE CASCADE,
-
-        UNIQUE          (PostId, SiteId, SitePostId)
+        FOREIGN KEY     (PostId)                  REFERENCES      Posts(Id)         ON DELETE CASCADE,
+        FOREIGN KEY     (SiteId)                  REFERENCES      Sites(Id)         ON DELETE CASCADE,
+        UNIQUE          (SiteId, Path)
     );
 
+    CREATE INDEX IF NOT EXISTS I_PostFiles_PostId ON PostFiles(PostId);
+    CREATE INDEX IF NOT EXISTS I_PostFiles_Path ON PostFiles(Path);
 
-        )SQL"sv;
+    PRAGMA foreign_keys = ON;
+
+       )SQL"sv;
 }
 
 StringView SQLGetUpdateSchema(int64_t _Version)

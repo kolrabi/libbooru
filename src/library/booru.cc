@@ -2,7 +2,6 @@
 
 #include <booru/db/entities/post.hh>
 #include <booru/db/entities/post_file.hh>
-#include <booru/db/entities/post_site_id.hh>
 #include <booru/db/entities/post_tag.hh>
 #include <booru/db/entities/post_type.hh>
 #include <booru/db/entities/site.hh>
@@ -55,15 +54,12 @@ ResultCode Booru::OpenDatabase(StringView const& _Path, bool _Create)
 
     m_DB = db.Value;
 
-    DB::TransactionGuard guard(m_DB);
-
     LOG_INFO("Checking database version...");
     auto dbVersion = GetConfigInt64("db.version");
     if (!dbVersion)
     {
         if (!_Create)
         {
-            guard.Rollback();
             m_DB = nullptr;
             return ResultCode::InvalidArgument;
         }
@@ -81,8 +77,6 @@ ResultCode Booru::OpenDatabase(StringView const& _Path, bool _Create)
     {
         CHECK_RETURN_RESULT_ON_ERROR(UpdateTables(i));
     }
-
-    guard.Commit();
 
     return ResultCode::OK;
 }
@@ -122,7 +116,7 @@ ResultCode Booru::SetConfig(DB::TEXT const& _Name, DB::TEXT const& _Value)
             db.Value));
     CHECK_RETURN_RESULT_ON_ERROR(stmt.Value->BindValue("Name", _Name));
     CHECK_RETURN_RESULT_ON_ERROR(stmt.Value->BindValue("Value", _Value));
-    CHECK_RETURN(stmt.Value->Step(false));
+    CHECK_RETURN(stmt.Value->StepUpdate());
 }
 
 Expected<DB::INTEGER> Booru::GetConfigInt64(DB::TEXT const& _Name)
@@ -192,10 +186,16 @@ Booru::AddTagToPost(DB::Entities::Post const& _Post,
 
         // actually add tag
         DB::Entities::PostTag postTag;
-        postTag.PostId = _Post.Id;
-        postTag.TagId  = tag.Value.Id;
+        postTag.PostId    = _Post.Id;
+        postTag.TagId     = tag.Value.Id;
 
-        CHECK_RETURN_RESULT_ON_ERROR(Create(postTag));
+        auto createResult = Create(postTag);
+        if (createResult.Code == ResultCode::AlreadyExists)
+        {
+            // already exists
+            transactionGuard.Commit();
+            return ResultCode::OK;
+        }
 
         // try to honor implications, ignore errors
         CHECK_VAR_RETURN_RESULT_ON_ERROR(implications,
@@ -329,23 +329,6 @@ ExpectedVector<DB::Entities::PostFile>
 Booru::GetFilesForPost(DB::INTEGER _PostId)
 {
     return GetAll<DB::Entities::PostFile>("PostId", _PostId);
-}
-
-// ////////////////////////////////////////////////////////////////////////////////////////////
-// PostSiteId
-// ////////////////////////////////////////////////////////////////////////////////////////////
-
-/// @brief Get all post site ids.
-ExpectedVector<DB::Entities::PostSiteId> Booru::GetPostSiteIds()
-{
-    return GetAll<DB::Entities::PostSiteId>();
-}
-
-/// @brief Get all site ids for a given post.
-ExpectedVector<DB::Entities::PostSiteId>
-Booru::GetPostSiteIdsForPost(DB::INTEGER _PostId)
-{
-    return GetAll<DB::Entities::PostSiteId>("PostId", _PostId);
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////
@@ -578,8 +561,12 @@ ResultCode Booru::CreateTables()
     CHECK_VAR_RETURN_RESULT_ON_ERROR(db, GetDatabase());
     LOG_INFO("Creating database tables...");
 
+    StringView sqlSchema     = SQLGetBaseSchema();
+    StringVector sqlCommands = Strings::Split(sqlSchema, ';');
+
     DB::TransactionGuard guard(db.Value);
-    CHECK_RETURN_RESULT_ON_ERROR(db.Value->ExecuteSQL(SQLGetBaseSchema()));
+    for (auto& sql : sqlCommands)
+        CHECK_RETURN_RESULT_ON_ERROR(db.Value->ExecuteSQL(sql));
     guard.Commit();
 
     return ResultCode::CreatedOK;

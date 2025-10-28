@@ -67,13 +67,15 @@ ResultCode Backend::ExecuteSQL(StringView const& _SQL)
 {
     CHECK_ASSERT(m_Handle != nullptr);
 
-    int sqlite_result =
-        sqlite3_exec(m_Handle, String(_SQL).c_str(), nullptr, nullptr, nullptr);
-    if (sqlite_result == SQLITE_OK) { return ResultCode::OK; }
+    sqlite3_exec(m_Handle, String(_SQL).c_str(), nullptr, nullptr, nullptr);
+    auto result = Sqlite3ToResult(sqlite3_extended_errcode(m_Handle));
 
-    LOG_ERROR("Execute SQL failed with sqlite3 error code {}, SQL was:\n{}",
-              sqlite_result, _SQL);
-    return Sqlite3ToResult(sqlite_result);
+    if (ResultIsError(result))
+    {
+        LOG_ERROR("Execute SQL failed with result '{}', SQL was:\n{}",
+                  ResultToString(result), _SQL);
+    }
+    return result;
 }
 
 bool Backend::IsInTransaction() const { return m_TransactionDepth > 0; }
@@ -82,7 +84,7 @@ ResultCode Backend::BeginTransaction()
 {
     if (m_TransactionDepth == 0)
     {
-        LOG_INFO("Start of transaction");
+        LOG_DEBUG("Start of transaction");
         m_TransactionDepth++;
         m_TransactionFailed = false;
         return ExecuteSQL("BEGIN TRANSACTION;");
@@ -101,12 +103,12 @@ ResultCode Backend::CommitTransaction()
     {
         if (m_TransactionFailed)
         {
-            LOG_INFO("End of transaction, rolling back...");
+            LOG_DEBUG("End of transaction, rolling back...");
             return ExecuteSQL("ROLLBACK;");
         }
         else
         {
-            LOG_INFO("End of transaction, committing...");
+            LOG_DEBUG("End of transaction, committing...");
             return ExecuteSQL("COMMIT;");
         }
     }

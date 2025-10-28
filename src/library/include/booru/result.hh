@@ -35,7 +35,11 @@ enum class ResultCode : int32_t
     DatabaseLocked              = -2001,
     DatabaseTableLocked         = -2002,
     DatabaseRangeError          = -2003,
-    DatabaseConstraintViolation = -2004
+
+    DatabaseConstraintViolation = -2004,
+    DatabaseFKeyViolation       = -2005,
+    DatabasePKeyViolation       = -2006,
+    DatabaseNotNullViolation    = -2007,
 };
 
 [[nodiscard]] char const* ResultToString(ResultCode _Result);
@@ -80,7 +84,7 @@ template <class TValue> struct [[nodiscard]] Expected
     operator ResultCode() const { return Code; }
 
     /// @brief Implicit operator to retrieve value.
-    operator TValue() const { return Value; }
+    operator TValue const&() const { return Value; }
 
     template <class Callable, typename... TArgs>
     auto Then(Callable _Callable, TArgs... args)
@@ -176,6 +180,12 @@ CheckResult(String const& _LoggerName, TValue const& _Result,
     return false;
 }
 
+template <class TValue, class... TArgs>
+static inline bool CheckResultSilent(TValue const& _Result)
+{
+    return ResultIsError(_Result);
+}
+
 // helper macros
 
 // Check x, On error: log error with var args, resume.
@@ -206,6 +216,13 @@ CheckResult(String const& _LoggerName, TValue const& _Result,
             return (ResultCode)_result;                                        \
     }
 
+// Check x. On error: log error with var args, return error code.
+#define CHECK_SILENT_RETURN_RESULT_ON_ERROR(x)                                 \
+    {                                                                          \
+        auto const& _result = (x);                                             \
+        if (CheckResultSilent(_result)) return (ResultCode)_result;            \
+    }
+
 // Check x. On error: log error with var args, continue in loop.
 #define CHECK_CONTINUE_ON_ERROR(x, ...)                                        \
     {                                                                          \
@@ -214,6 +231,13 @@ CheckResult(String const& _LoggerName, TValue const& _Result,
                         std::source_location::current() __VA_OPT__(, )         \
                             __VA_ARGS__))                                      \
             continue;                                                          \
+    }
+
+// Check x. On error:  continue in loop.
+#define CHECK_SILENT_CONTINUE_ON_ERROR(x)                                      \
+    {                                                                          \
+        auto const& _result = (x);                                             \
+        if (CheckResultSilent(_result)) continue;                              \
     }
 
 // Check x. On error: log error with var args, break from loop.
@@ -236,5 +260,17 @@ CheckResult(String const& _LoggerName, TValue const& _Result,
 #define CHECK_VAR_RETURN_RESULT_ON_ERROR(name, init)                           \
     auto name = (init);                                                        \
     CHECK_RETURN_RESULT_ON_ERROR(name)
+
+#define CHECK_VAR_CONTINUE_ON_ERROR(name, init)                                \
+    auto name = (init);                                                        \
+    CHECK_CONTINUE_ON_ERROR(name)
+
+#define CHECK_VAR_SILENT_RETURN_RESULT_ON_ERROR(name, init)                    \
+    auto name = (init);                                                        \
+    CHECK_SILENT_RETURN_RESULT_ON_ERROR(name)
+
+#define CHECK_VAR_SILENT_CONTINUE_ON_ERROR(name, init)                         \
+    auto name = (init);                                                        \
+    CHECK_SILENT_CONTINUE_ON_ERROR(name)
 
 } // namespace Booru

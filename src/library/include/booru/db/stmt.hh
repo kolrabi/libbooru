@@ -70,7 +70,8 @@ class IStmt : public std::enable_shared_from_this<IStmt>
     /// @brief Execute statement, advance to next row
     /// @param _NeedRow If true, return an error if there is no row returned.
     /// @return Result code.
-    virtual ExpectedStmt Step(bool _NeedRow = false) = 0;
+    virtual ExpectedStmt StepQuery(bool _NeedRow = false)  = 0;
+    virtual ExpectedStmt StepUpdate(bool _NeedRow = false) = 0;
 
     /// @brief Execute statement, return single value. First row, first column.
     /// @tparam TValue Type of value to return.
@@ -169,18 +170,18 @@ template <class TValue> Expected<TValue> IStmt::ExecuteScalar(bool _NeedRow)
 {
     TValue value;
 
-    auto result = Step(_NeedRow).Then([&](auto s)
-                                      { return s->GetColumnValue(0, value); });
+    auto result = StepQuery(_NeedRow).Then(
+        [&](auto s) { return s->GetColumnValue(0, value); });
 
     return Expected<TValue>::ErrorOrObject(result, std::move(value));
 }
 
 template <class TEntity> Expected<TEntity> IStmt::ExecuteRow(bool _NeedRow)
 {
-    CHECK_RETURN_RESULT_ON_ERROR(Step(_NeedRow));
+    CHECK_SILENT_RETURN_RESULT_ON_ERROR(StepQuery(_NeedRow));
 
     TEntity value;
-    CHECK_RETURN_RESULT_ON_ERROR(LoadEntity(value, this));
+    CHECK_SILENT_RETURN_RESULT_ON_ERROR(LoadEntity(value, this));
     return value;
 }
 
@@ -188,15 +189,14 @@ template <class TEntity> ExpectedVector<TEntity> IStmt::ExecuteList()
 {
     Vector<TEntity> values;
 
-    auto stepResult = Step();
-    CHECK_RETURN_RESULT_ON_ERROR(stepResult);
+    CHECK_VAR_SILENT_RETURN_RESULT_ON_ERROR(stepResult, StepQuery());
     while (stepResult != ResultCode::DatabaseEnd)
     {
         TEntity value;
         CHECK_RETURN_RESULT_ON_ERROR(LoadEntity(value, this));
         values.push_back(value);
-        stepResult = Step();
-        CHECK_RETURN_RESULT_ON_ERROR(stepResult);
+        stepResult = StepQuery();
+        CHECK_SILENT_RETURN_RESULT_ON_ERROR(stepResult);
     }
     return values;
 }

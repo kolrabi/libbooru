@@ -175,15 +175,33 @@ DatabasePreparedStatementSqlite3::GetColumnIndex(StringView const& _Name)
     return ResultCode::NotFound;
 }
 
-ExpectedStmt DatabasePreparedStatementSqlite3::Step(bool _NeedRow)
+ExpectedStmt DatabasePreparedStatementSqlite3::StepQuery(bool _NeedRow)
 {
-    assert(m_Handle);
-    ResultCode resultCode = Sqlite3ToResult(sqlite3_step(m_Handle));
+    CHECK_ASSERT(m_Handle);
+
+    sqlite3_step(m_Handle);
+
+    auto sqlite     = sqlite3_db_handle(m_Handle);
+    auto resultCode = Sqlite3ToResult(sqlite3_extended_errcode(sqlite));
+
     if (_NeedRow && resultCode == ResultCode::DatabaseEnd)
-    {
-        if (sqlite3_changes(sqlite3_db_handle(m_Handle)) == 0)
-            resultCode = ResultCode::NotFound;
-    }
+        resultCode = ResultCode::NotFound;
+
+    return {shared_from_this(), resultCode};
+}
+
+ExpectedStmt DatabasePreparedStatementSqlite3::StepUpdate(bool _NeedRow)
+{
+    CHECK_ASSERT(m_Handle);
+
+    sqlite3_step(m_Handle);
+
+    auto sqlite     = sqlite3_db_handle(m_Handle);
+    auto resultCode = Sqlite3ToResult(sqlite3_extended_errcode(sqlite));
+
+    if (!ResultIsError(resultCode) && _NeedRow && sqlite3_changes(sqlite) == 0)
+        resultCode = ResultCode::DatabaseError;
+
     return {shared_from_this(), resultCode};
 }
 
